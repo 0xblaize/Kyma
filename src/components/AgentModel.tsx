@@ -42,26 +42,19 @@ export default function AgentModel({ state, targetHeight = 1.8 }: AgentModelProp
 
   // Material + one-time fit measurement.
   useEffect(() => {
-    // Self-lit GOLD: high emissive so the agent is visible regardless of the
-    // (very dark) scene lighting, low metalness so it shows diffuse colour
-    // instead of only reflecting the environment. DoubleSide guards against the
-    // AI-generated mesh's inconsistent winding.
-    const gold = new THREE.MeshStandardMaterial({
-      color: '#e9b22a',
-      metalness: 0.3,
-      roughness: 0.4,
-      emissive: new THREE.Color('#caa01f'),
-      emissiveIntensity: 0.85,
-      envMapIntensity: 1.2,
-      side: THREE.DoubleSide,
-    })
+    // Keep the GLB's own materials (colors/textures from the metadata) — do
+    // NOT replace them. We only flip shadow flags + frustumCulled so the
+    // AI-generated mesh's loose culling box doesn't pop it out of frame.
+    // DoubleSide guards against the model's inconsistent face winding.
     scene.traverse((o) => {
       if ((o as THREE.Mesh).isMesh) {
         const m = o as THREE.Mesh
-        m.material = gold
         m.castShadow = true
         m.receiveShadow = true
         m.frustumCulled = false
+        const mat = m.material as THREE.Material | THREE.Material[] | undefined
+        if (Array.isArray(mat)) mat.forEach((x) => (x.side = THREE.DoubleSide))
+        else if (mat) mat.side = THREE.DoubleSide
       }
     })
 
@@ -116,7 +109,10 @@ export default function AgentModel({ state, targetHeight = 1.8 }: AgentModelProp
     }
   }, [scene, targetHeight])
 
-  // Crossfade whenever the requested state changes.
+  // Crossfade whenever the requested state changes. On the FIRST play we use
+  // a zero-length fade-in so the model never shows its T-pose / bind-pose
+  // — the previous 0.45s fade-in revealed the unanimated rest pose briefly
+  // when the agent group first mounted, which read as a glitch.
   useEffect(() => {
     if (current.current === state) return
 
@@ -127,6 +123,7 @@ export default function AgentModel({ state, targetHeight = 1.8 }: AgentModelProp
     const prevName = current.current != null ? names[CLIP_INDEX[current.current]] : undefined
     const prev = prevName ? actions[prevName] : undefined
 
+    const isFirst = current.current == null
     const once = ONCE_STATES.has(state)
     next
       .reset()
@@ -134,7 +131,7 @@ export default function AgentModel({ state, targetHeight = 1.8 }: AgentModelProp
     next.clampWhenFinished = once
     next.enabled = true
     next.setEffectiveWeight(1)
-    next.fadeIn(FADE).play()
+    next.fadeIn(isFirst ? 0 : FADE).play()
 
     if (prev && prev !== next) prev.fadeOut(FADE)
 

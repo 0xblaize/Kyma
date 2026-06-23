@@ -9,7 +9,12 @@ import { AgentState } from '@/lib/clips'
 import AgentModel from './AgentModel'
 import ThoughtCloud from './ThoughtCloud'
 import HeroBox from './HeroBox'
-import Staircase, { stairPoint, STAIR_TOP, STAIR_BOTTOM } from './Staircase'
+import Staircase, {
+  stairPoint,
+  STAIR_TOP,
+  STAIR_BOTTOM,
+  PODIUM_HEIGHT,
+} from './Staircase'
 import DeskRig, { SEAT_POS } from './DeskRig'
 
 interface AgentSceneProps {
@@ -17,32 +22,30 @@ interface AgentSceneProps {
   phaseProgress: number
 }
 
-// ── Camera anchors ─────────────────────────────────────────────────────────
-// During intro/morph the camera looks at the world origin where the box
-// floats. As the morph progresses we lerp to the agent-tracking pose.
-const HERO_CAM_POS = new THREE.Vector3(0, 0.5, 5)
-const HERO_LOOK_AT = new THREE.Vector3(0, 0, 0)
+// Body center of the agent when standing on the pavement. We frame both the
+// hero box (during intro) and the character (during morph) around this point
+// — the camera never tilts down to the floor or peeks behind the podium.
+const PODIUM_BODY_Y = PODIUM_HEIGHT + 0.9
+const PODIUM_TOP_FOCUS = new THREE.Vector3(0, PODIUM_BODY_Y, 0)
 
 /**
- * Per-phase camera offset relative to the agent's focus point (agent feet).
- *  - morph:  pulled back at body-center height for a full-body second-person
- *            shot — the agent stands calm on the pavement, breathing, with
- *            the thought cloud above its head. Stationary view.
- *  - data:   pulled out to the side while the agent walks toward the desk.
- *  - later:  3/4 over-shoulder view at the desk.
+ * Per-phase camera offset relative to the focus point.
+ *  - intro / morph: directly in front at body height — fixed full-body view of
+ *    the pavement and whatever sits on it (box, then character). Stationary.
+ *  - data:  pulled out to the side as the agent walks toward the desk.
+ *  - later: 3/4 over-shoulder view at the desk.
  */
 function cameraOffsetForPhase(phase: number): THREE.Vector3 {
-  if (phase <= PHASE.morph) return new THREE.Vector3(0, 0.9, 4.8)
+  if (phase <= PHASE.morph) return new THREE.Vector3(0, 0.0, 4.8)
   if (phase === PHASE.data) return new THREE.Vector3(4.2, 1.4, 2.4)
   return new THREE.Vector3(2.6, 1.6, 3.4)
 }
 
 /**
  * Which way the agent should be facing, in radians around Y.
- *  - intro / morph: face the camera (+Z). On the podium, idle + thinking, the
- *    BTC thought cloud floats above its head.
- *  - data → seated: face the desk (-Z) so it walks toward, then sits at, the
- *    monitors.
+ *  - intro / morph: face the camera so the user sees the front of the
+ *    mannequin with the thought cloud above its head.
+ *  - data → seated: face the desk so the walk and sit read naturally.
  */
 function facingForPhase(phase: number): number {
   if (phase <= PHASE.morph) return Math.PI
@@ -52,12 +55,11 @@ function facingForPhase(phase: number): number {
 function stateForPhase(phase: number): AgentState {
   switch (phase) {
     case PHASE.intro:
-      return 'stand_idle'
     case PHASE.morph:
-      // Stand idle on the podium, "thinking" (breathing bone animation +
-      // thought cloud). No mid-morph walk transition — descent happens in
-      // the data phase.
-      return 'thinking'
+      // Calm standing breath the whole time the character is on the podium —
+      // no thinking-clip switch (which was just an alias for stand_idle and
+      // briefly showed bind-pose on the swap).
+      return 'stand_idle'
     case PHASE.data:
       return 'walk'
     case PHASE.shadows:
@@ -76,10 +78,10 @@ function walkProgress(phase: number, p: number): number {
   return 1
 }
 
-// Descent + walk choreography for the data phase. First half = drop straight
-// down off the podium to the ground; second half = walk along the floor to
-// the seat. (We'll replace the straight drop with a real climb-down once the
-// podium reads correctly on screen.)
+// Descent path for the data phase. First slice = drop straight off the
+// podium to the ground; remainder = walk along the floor to the seat. The
+// pavement→ground transition is intentionally simple; we iterate on it once
+// the on-podium reveal reads correctly.
 const DROP_FRAC = 0.35
 
 function journeyPoint(w: number, out: THREE.Vector3): THREE.Vector3 {
@@ -89,25 +91,12 @@ function journeyPoint(w: number, out: THREE.Vector3): THREE.Vector3 {
 }
 
 function thoughtShow(phase: number, p: number): number {
-  // Cloud is visible the whole time the agent is standing idle on the podium,
-  // fading in at the start of morph and out at the very end.
+  // Cloud only appears AFTER the character is revealed — fades in once the
+  // box is fully gone, holds, then fades out at the end of morph.
   if (phase !== PHASE.morph) return 0
-  if (p < 0.15) return Math.max(0, p / 0.15)
+  if (p < 0.45) return 0
+  if (p < 0.6) return (p - 0.45) / 0.15
   if (p > 0.9) return Math.max(0, 1 - (p - 0.9) / 0.1)
-  return 1
-}
-
-/**
- * 0 = "look at the floating box at the origin" (intro)
- * 1 = "track the agent on the pavement" (morph onward)
- *
- * Quick swoop: as the box bursts (early morph), the camera reveals the agent
- * on the pavement and then HOLDS steady for the remainder of the thinking
- * phase — the user explicitly asked for a stationary observation view.
- */
-function heroToAgentBlend(phase: number, p: number): number {
-  if (phase < PHASE.morph) return 0
-  if (phase === PHASE.morph) return Math.min(1, Math.max(0, (p - 0.2) / 0.25))
   return 1
 }
 
@@ -116,28 +105,56 @@ export default function AgentScene({ phase, phaseProgress }: AgentSceneProps) {
   const agentRef = useRef<THREE.Group>(null)
   const tmp = useMemo(() => new THREE.Vector3(), [])
   const tmp2 = useMemo(() => new THREE.Vector3(), [])
-  const camTarget = useMemo(() => new THREE.Vector3(), [])
   const lookTarget = useMemo(() => new THREE.Vector3(), [])
 
-  const state = stateForPhase(phase, phaseProgress)
+  const state = stateForPhase(phase)
   const seated = phase >= PHASE.shadows
   const screenGlow = phase === PHASE.fusion ? 1 : phase > PHASE.fusion ? 0.5 : 0
   const cloud = thoughtShow(phase, phaseProgress)
 
-  // Hero box drive: 0 while idle in intro, ramps 0→1 across the morph.
+  // Hero box drive: small drift during intro, then a 0→1 burst across morph.
   const heroExplode =
     phase === PHASE.intro
-      ? phaseProgress * 0.15
+      ? phaseProgress * 0.1
       : phase === PHASE.morph
-        ? 0.15 + phaseProgress * 0.85
+        ? 0.1 + phaseProgress * 0.9
         : 1
-  const heroVisible = phase <= PHASE.morph
+  // Box is gone once it has fully shattered (~halfway through morph) so the
+  // character can occupy the pavement cleanly.
+  const heroVisible = phase < PHASE.morph || (phase === PHASE.morph && phaseProgress < 0.45)
 
-  // World visibility: keep the staircase/desk hidden during the intro so the
-  // user only sees the floating box on black. They snap in as the morph plays.
+  // World visibility: podium + character mount at morph start so the box
+  // bursts and reveals the character standing in place.
   const worldVisible = phase >= PHASE.morph
 
+  // Ground plane stays hidden during morph — the pavement is meant to read as
+  // a floating island in the dark. It comes in when the agent walks down.
+  const groundVisible = phase > PHASE.morph
+  // Same for the desk rig — during morph the only things in view should be
+  // the pavement, the breaking box, and the character standing on top.
+  const deskVisible = phase > PHASE.morph
+
   useFrame(() => {
+    // Camera focus point. Until the agent is on the descent (data phase) we
+    // always look at the podium top — this is the only place anything is
+    // happening (box bouncing, then bursting, then character revealed).
+    let focus: THREE.Vector3
+    if (seated) focus = SEAT_POS
+    else if (phase <= PHASE.morph) focus = PODIUM_TOP_FOCUS
+    else focus = agentRef.current?.position ?? STAIR_BOTTOM
+
+    const off = cameraOffsetForPhase(phase)
+    tmp2.set(focus.x + off.x, focus.y + off.y, focus.z + off.z)
+    // PODIUM_TOP_FOCUS is already at body center; the seat/feet focuses for
+    // other phases need a body-height nudge so the camera doesn't aim at the
+    // floor / under the chair.
+    const lookYAdj = phase <= PHASE.morph ? 0 : 0.9
+    lookTarget.set(focus.x, focus.y + lookYAdj, focus.z)
+
+    camera.position.lerp(tmp2, 0.1)
+    camera.lookAt(lookTarget.x, lookTarget.y, lookTarget.z)
+
+    // Agent transform — only meaningful once the agent group has mounted.
     const g = agentRef.current
     if (!g) return
 
@@ -149,98 +166,75 @@ export default function AgentScene({ phase, phaseProgress }: AgentSceneProps) {
       g.position.lerp(tmp, 0.2)
     }
 
-    // Facing: face the camera during morph, then turn to face the desk as
-    // the descent begins (see facingForPhase).
-    const targetRotY = facingForPhase(phase, phaseProgress)
-    g.rotation.y = THREE.MathUtils.lerp(g.rotation.y, targetRotY, 0.1)
-
-    // Agent-tracking camera target uses a per-phase offset so the staircase
-    // reads as stairs (side angle) during the walk and as a portrait shot
-    // during the reveal.
-    const focus = seated ? SEAT_POS : g.position
-    const off = cameraOffsetForPhase(phase)
-    tmp2.set(focus.x + off.x, focus.y + off.y, focus.z + off.z)
-    // Aim at body center (≈0.9 above the agent's feet) so the full body fits
-    // in frame for the morph pavement shot. For the seated phase this lands
-    // around the torso which is still a natural read.
-    lookTarget.set(focus.x, focus.y + 0.9, focus.z)
-
-    // Blend between hero-view (looking at the box at the origin) and the
-    // agent-tracking view as the morph progresses.
-    const t = heroToAgentBlend(phase, phaseProgress)
-    camTarget.lerpVectors(HERO_CAM_POS, tmp2, t)
-    camera.position.lerp(camTarget, 0.08)
-
-    tmp.lerpVectors(HERO_LOOK_AT, lookTarget, t)
-    camera.lookAt(tmp.x, tmp.y, tmp.z)
+    const targetRotY = facingForPhase(phase)
+    g.rotation.y = THREE.MathUtils.lerp(g.rotation.y, targetRotY, 0.15)
   })
 
   return (
     <>
-      <color attach="background" args={['#04050a']} />
-      <fog attach="fog" args={['#04050a', 8, 22]} />
-      <ambientLight intensity={0.25} />
+      <color attach="background" args={['#000000']} />
+      <fog attach="fog" args={['#000000', 6, 18]} />
+      <ambientLight intensity={0.12} color="#2a2f3a" />
 
-      {/* Hero box lights — used during intro when the world is hidden. */}
-      {heroVisible && (
-        <>
-          <directionalLight position={[3, 5, 3]} intensity={1.2} color="#fff8e0" />
-          <pointLight position={[0, 3, 2]} intensity={2} color="#d4a017" distance={8} />
-          <pointLight position={[0, -2, 3]} intensity={0.8} color="#1a4fff" distance={6} />
-        </>
-      )}
+      {/* Key light — cool neutral, comes from above-front, lights the top of
+          the podium and the character. Used in all phases. */}
+      <spotLight
+        position={[0, PODIUM_HEIGHT + 6, 4]}
+        target-position={[0, PODIUM_BODY_Y, 0]}
+        angle={0.55}
+        penumbra={0.85}
+        intensity={140}
+        color="#cfd6e0"
+        distance={28}
+        castShadow
+        shadow-mapSize={[512, 512]}
+        shadow-bias={-0.0002}
+      />
+      {/* Rim from behind — pale cool tone, separates the black character
+          from the black background. */}
+      <spotLight
+        position={[-3, PODIUM_HEIGHT + 3, -4]}
+        target-position={[0, PODIUM_BODY_Y, 0]}
+        angle={0.6}
+        penumbra={1}
+        intensity={60}
+        color="#7fa4c8"
+        distance={20}
+      />
 
-      {/* World lighting — only when the staircase/desk are visible. */}
       {worldVisible && (
-        <>
-          <spotLight
-            position={[4, 8, 4]}
-            angle={0.5}
-            penumbra={0.8}
-            intensity={120}
-            color="#fff4e0"
-            distance={30}
-            castShadow
-            shadow-mapSize={[512, 512]}
-            shadow-bias={-0.0002}
-          />
-          <spotLight
-            position={[-5, 5, -5]}
-            angle={0.7}
-            penumbra={1}
-            intensity={50}
-            color="#c8ff00"
-            distance={25}
-          />
-          <pointLight position={[-3, 2, 4]} intensity={8} color="#1a4fff" distance={14} />
-          <Suspense fallback={null}>
-            <Environment preset="studio" />
-          </Suspense>
-        </>
+        <Suspense fallback={null}>
+          <Environment preset="night" />
+        </Suspense>
       )}
 
-      <HeroBox explodeProgress={heroExplode} visible={heroVisible} />
+      {/* Hero box now lives ON the podium so it bursts where the character
+          will be revealed. */}
+      <group position={[0, PODIUM_BODY_Y, 0]}>
+        <HeroBox explodeProgress={heroExplode} visible={heroVisible} />
+      </group>
 
       {worldVisible && (
         <>
           <Staircase />
-          <DeskRig screenGlow={screenGlow} />
+          {deskVisible && <DeskRig screenGlow={screenGlow} />}
 
           <group
             ref={agentRef}
             position={[STAIR_TOP.x, STAIR_TOP.y, STAIR_TOP.z]}
+            rotation={[0, Math.PI, 0]}
             scale={1.0}
           >
             <AgentModel state={state} />
-            <pointLight position={[0, 2.4, 1.2]} intensity={6} color="#ffd98a" distance={6} />
-            <pointLight position={[0.6, 1.2, 0.8]} intensity={3} color="#c8ff00" distance={5} />
             <ThoughtCloud show={cloud} />
           </group>
 
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, -1]} receiveShadow>
-            <planeGeometry args={[40, 40]} />
-            <meshStandardMaterial color="#06070c" metalness={0.4} roughness={0.7} />
-          </mesh>
+          {groundVisible && (
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, -1]} receiveShadow>
+              <planeGeometry args={[40, 40]} />
+              <meshStandardMaterial color="#05060a" metalness={0.4} roughness={0.8} />
+            </mesh>
+          )}
         </>
       )}
     </>

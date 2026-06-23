@@ -26,20 +26,24 @@ export function stairPoint(t: number, out = new THREE.Vector3()) {
   return out.lerpVectors(STAIR_TOP, STAIR_BOTTOM, c)
 }
 
-const SLAB_MAT = { color: '#1c2128', metalness: 0.4, roughness: 0.55 }
-const UNDER_MAT = { color: '#0a0c10', metalness: 0.55, roughness: 0.6 }
+// All-black palette. The slab is a glossy black square, the undercut is even
+// darker so the edge reads as a shadow lip against the void.
+const SLAB_MAT = { color: '#0d0e12', metalness: 0.55, roughness: 0.4 }
+const UNDER_MAT = { color: '#040407', metalness: 0.6, roughness: 0.55 }
+const EDGE_MAT = { color: '#1a1d22', metalness: 0.7, roughness: 0.3 }
 
 /**
  * Just the top of the podium — a thick square pavement slab. The slab's top
- * face sits at PODIUM_HEIGHT (so STAIR_TOP rests on it). A thin acid-green
- * rim wraps the top edge and matches the scene's accent palette.
+ * face sits at PODIUM_HEIGHT (so STAIR_TOP rests on it). A thin dark metal
+ * edge strip wraps the top corner so the silhouette of the slab stays legible
+ * against the black background under the cool key + rim lighting.
  */
 export default function Staircase() {
   const slabCenterY = PODIUM_HEIGHT - PAVEMENT_THICKNESS / 2
   const undercutCenterY = PODIUM_HEIGHT - PAVEMENT_THICKNESS - 0.04
-  const rimY = PODIUM_HEIGHT + 0.005
-  const rimThickness = 0.03
-  const rimInset = 0.02
+  const edgeY = PODIUM_HEIGHT - 0.012
+  const edgeThickness = 0.025
+  const edgeInset = 0.015
   const half = PAVEMENT_SIZE / 2
 
   return (
@@ -50,49 +54,30 @@ export default function Staircase() {
         <meshStandardMaterial {...SLAB_MAT} />
       </mesh>
 
-      {/* Slightly darker undercut so the slab's underside reads as a shadowed
-          lip rather than blending into the fog. Inset on all sides. */}
+      {/* Darker undercut so the slab's underside reads as a shadow lip
+          instead of blending into the fog. Inset on all sides. */}
       <mesh position={[0, undercutCenterY, 0]}>
         <boxGeometry args={[PAVEMENT_SIZE - 0.3, 0.08, PAVEMENT_SIZE - 0.3]} />
         <meshStandardMaterial {...UNDER_MAT} />
       </mesh>
 
-      {/* Acid-green rim wrapping the standing surface (four edge strips). */}
-      <mesh position={[0, rimY, half - rimInset]}>
-        <boxGeometry args={[PAVEMENT_SIZE, rimThickness, 0.04]} />
-        <meshStandardMaterial
-          color="#c8ff00"
-          emissive="#c8ff00"
-          emissiveIntensity={1.8}
-          toneMapped={false}
-        />
+      {/* Thin metal edge strips around the top — catch the cool key light to
+          define the silhouette of the slab without introducing any colour. */}
+      <mesh position={[0, edgeY, half - edgeInset]}>
+        <boxGeometry args={[PAVEMENT_SIZE, edgeThickness, 0.03]} />
+        <meshStandardMaterial {...EDGE_MAT} />
       </mesh>
-      <mesh position={[0, rimY, -(half - rimInset)]}>
-        <boxGeometry args={[PAVEMENT_SIZE, rimThickness, 0.04]} />
-        <meshStandardMaterial
-          color="#c8ff00"
-          emissive="#c8ff00"
-          emissiveIntensity={1.8}
-          toneMapped={false}
-        />
+      <mesh position={[0, edgeY, -(half - edgeInset)]}>
+        <boxGeometry args={[PAVEMENT_SIZE, edgeThickness, 0.03]} />
+        <meshStandardMaterial {...EDGE_MAT} />
       </mesh>
-      <mesh position={[-(half - rimInset), rimY, 0]}>
-        <boxGeometry args={[0.04, rimThickness, PAVEMENT_SIZE]} />
-        <meshStandardMaterial
-          color="#c8ff00"
-          emissive="#c8ff00"
-          emissiveIntensity={1.8}
-          toneMapped={false}
-        />
+      <mesh position={[-(half - edgeInset), edgeY, 0]}>
+        <boxGeometry args={[0.03, edgeThickness, PAVEMENT_SIZE]} />
+        <meshStandardMaterial {...EDGE_MAT} />
       </mesh>
-      <mesh position={[half - rimInset, rimY, 0]}>
-        <boxGeometry args={[0.04, rimThickness, PAVEMENT_SIZE]} />
-        <meshStandardMaterial
-          color="#c8ff00"
-          emissive="#c8ff00"
-          emissiveIntensity={1.8}
-          toneMapped={false}
-        />
+      <mesh position={[half - edgeInset, edgeY, 0]}>
+        <boxGeometry args={[0.03, edgeThickness, PAVEMENT_SIZE]} />
+        <meshStandardMaterial {...EDGE_MAT} />
       </mesh>
     </group>
   )

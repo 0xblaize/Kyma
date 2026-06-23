@@ -1,0 +1,297 @@
+AGENT.OS: MASTER UI/UX & FUNCTIONAL SPECIFICATION (VOL. 1)
+
+Project: Agent OS - Web3 Autonomous Trading Intelligence (Bitget Hackathon)
+Design System: Dark Mode, Institutional Tech, High-Contrast Monospace Accents
+Core Palette: Slate/Zinc backgrounds, Emerald (Profit/Success), Rose (Loss/Error), Acid Yellow/Green (Primary Actions/Highlights).
+
+1. GLOBAL ENVIRONMENT & THEME
+
+1.1 Base Layer
+
+Background: The entire browser window utilizes a deep slate hex of #09090B (Tailwind bg-zinc-950). It is not pure black.
+
+Font Family (Headers & UI): Inter or SF Pro Display. This provides a clean, easily legible foundation. antialiased tracking.
+
+Font Family (Data & Terminal): JetBrains Mono or Fira Code. Used exclusively for numbers, timestamps, and terminal outputs to ensure vertical alignment of digits.
+
+Scrollbars: Custom webkit scrollbars. Width 6px. Track color #18181B (zinc-900), Thumb color #3F3F46 (zinc-700), rounded fully.
+
+Grid Structure: A CSS Grid layout with a 24-column base, ensuring perfect alignment across the split screen. Gap size is locked at 1rem (16px).
+
+1.2 The Modular Panel System
+
+Every distinct zone on the screen (Chart, Terminal, Viewport) is housed in a standardized panel container.
+
+Panel Background: #0C0C0F (slightly lighter than base background).
+
+Panel Border: 1px solid #27272A (Tailwind border-zinc-800).
+
+Border Radius: 0.5rem (8px).
+
+Header Bar (Inside Panel): A 32px tall top section within each panel featuring a bottom border (border-b border-zinc-800) separating the title from the content.
+
+2. ZONE 1: THE GLOBAL NAVIGATION HEADER
+
+Located at the absolute top of the screen (fixed top-0 w-full h-16), spanning 100% width. Flexbox layout, justify-between, items-center, px-6.
+
+2.1 Brand Identity (Top Left)
+
+App Icon: A perfect 32x32 pixel square. Background #1E293B (slate-800). A subtle inner border of #475569. Inside is a glowing acid-green letter "A" (#A3E635 / text-lime-400), font-weight 800.
+
+App Title: "Agent.OS" positioned 12px to the right of the icon. Font weight 700, size 1.125rem (18px), tracking-tight, color #F8FAFC (slate-50).
+
+Version Tag: Directly below "Agent.OS" is a micro-text label: V1.0.0 · PAPER. Font size 0.65rem (10px), uppercase, color #64748B (slate-500), tracking-widest.
+
+Functional Logic: Clicking the Brand Identity acts as a hard reload for the dashboard frontend state.
+
+2.2 System Status (Top Center)
+
+Status Text: "Awaiting market feed" (Default State) or "Processing live data" (Active State).
+
+Typography: Monospace, size 12px, color #52525B (zinc-500).
+
+Animation: When active, the text features a trailing ellipsis ... driven by a CSS keyframe stepping animation.
+
+2.3 Wallet & Equity Control (Top Right)
+
+This is a flex container holding three distinct elements.
+
+Connection Badge: * Container: Pill shape (rounded-full), border 1px solid #065F46 (emerald-800), background #022C22 (emerald-950). Padding px-3 py-1.
+
+Indicator: A 6x6 pixel rounded-full div. Color #10B981 (emerald-500). Features an absolute positioned ping animation underneath (animate-ping) to signify live WebSocket connection.
+
+Text: "Online". Size 12px, color #34D399 (emerald-400).
+
+Wallet Address Panel:
+
+Label: "WALLET", size 10px, uppercase, color #52525B.
+
+Value: "Not connected" (Default) or Truncated Web3 Address (e.g., 0x9a4...b7c2). Color #D4D4D8 (zinc-300).
+
+Interaction: Clickable. Hover state changes background to #18181B. Triggers a standard Web3 modal (RainbowKit/Web3Auth) if not connected.
+
+Equity Display:
+
+Label: "EQUITY", size 10px, uppercase, color #A3E635 (lime-400).
+
+Value: — (Default) or $10,000.00. Font weight 600, monospace.
+
+Logic: This number is mathematically tied to the "Allocated Capital" input + "Cumulative PNL". It updates on every simulated tick.
+
+3. ZONE 2: THE 3D IMMERSIVE CANVAS (Top Left Quadrant)
+
+This is the largest visual element, occupying the top-left section (roughly 60% width, 50vh height).
+
+3.1 The Container
+
+Header: Text reads "AGENT.OS · VIEWPORT" in 10px uppercase tracking-widest.
+
+Status Pill (Top Left of Canvas): A small floating absolute div over the canvas. Reads "LIVE · PROCESSING". Background black at 50% opacity, backdrop blur 4px.
+
+3.2 React Three Fiber Implementation
+
+Canvas Element: w-full h-full, absolute positioned within the relative container to prevent layout shifting.
+
+Camera: PerspectiveCamera. fov: 45. Position: [-3, 2, 5]. Looks directly at the desk center.
+
+Lighting: * <Environment preset="night" /> (to keep the background dark).
+
+<spotLight /> positioned directly above the character at [0, 5, 0], intensity 2, castShadow enabled, color #ffffff (cool white).
+
+<pointLight /> positioned in front of the monitors at [0, 1, 1], color #A3E635 (acid green), intensity 0.5, creating a monitor-glow effect on the agent's face.
+
+3.3 The 3D Assets & Animation State Machine
+
+The Desk/Monitors: A low-poly cyber-desk model. Monitor screens feature a MeshBasicMaterial with color #EAB308 (yellow) to act as light emitters.
+
+The Agent Model (agent_os.glb):
+
+Material: Gold metallic texture. metalness: 0.9, roughness: 0.2.
+
+Rigging: Mixamo or AccuRig skeleton.
+
+State 1: Awaiting Feed (Idle)
+
+Animation: Sitting Idle. The character breathes slowly. Head moves randomly ±5 degrees on the Y-axis every 4 seconds.
+
+State 2: Processing / Active (Typing)
+
+Animation: Heavy Typing. Triggered the exact millisecond the "Deploy Agent" button is pressed.
+
+Transition: Handled via Drei's useAnimations. Crossfade duration 0.3s to prevent snapping.
+
+4. ZONE 3: AGENT CONFIGURATION SIDEBAR (The Vultrex Upgrade)
+
+This is the vertical panel on the far right. This is where the human controls the AI.
+
+4.1 Capital Allocation Input
+
+Label: "Allocated Capital (Mock USDT)", size 11px, color #A1A1AA.
+
+Input Field: * Height 40px, Background #09090B. Border 1px solid #27272A.
+
+Focus state: ring-1 ring-lime-400 border-lime-400.
+
+Placeholder: 0.00.
+
+"MAX" Button: Absolute positioned inside the right edge of the input. Size 24px tall. Text "MAX" in 10px lime-400. Clicking it fills the input with 10000.
+
+4.2 Risk Management Slider
+
+Label: "Risk Per Trade", followed by dynamic text showing [ 1.0% ].
+
+Slider Track: Height 4px. Background #27272A.
+
+Slider Fill: Color #A3E635. Width updates dynamically via React state.
+
+Slider Thumb: 16x16px circle, white, with a subtle drop shadow.
+
+Logic: Range is 0.1% to 5.0%. Step is 0.1%. The AI backend multiplies this percentage against the "Allocated Capital" to determine position sizing on Order Block triggers.
+
+4.3 Max Drawdown Kill Switch
+
+Layout: Flex row, justify-between.
+
+Label: "Hard Stop-Loss (Drawdown)".
+
+Input: A smaller numeric input box. Default 10%.
+
+Logic: If the Cumulative PNL reaches negative 10% of the Allocated Capital, a global event fires that stops the WebSocket, changes the 3D Agent to idle, and displays a red CRITICAL error in the terminal.
+
+4.4 The "Deploy Agent" Action Button
+
+Visuals: Width 100%, Height 48px. Background gradient from #84CC16 (lime-500) to #65A30D (lime-600). Text "DEPLOY AGENT", size 14px, weight 700, color #000000.
+
+Hover State: Brightens to #A3E635, cursor pointer, adds shadow-[0_0_20px_rgba(163,230,53,0.3)].
+
+Disabled State: If Wallet is not connected or Capital = 0, background is #27272A, text is #52525B, cursor not-allowed.
+
+Execution Logic: On click:
+
+Sets React global state isAgentActive = true.
+
+Triggers the 3D Agent to transition from Idle to Typing.
+
+Starts the setInterval mock data generators for the Terminal, Chart, and Ledger.
+
+Button text changes to "AGENT LIVE" and turns a dark, unclickable grey.
+
+5. ZONE 4: THE INTELLIGENCE FEEDS (Middle Column)
+
+This sits between the 3D Canvas and the Configuration Sidebar.
+
+5.1 Live Reasoning Terminal (Top Half)
+
+Header Layout: "Reasoning" on the left. On the right, muted text: perception · smc · risk · execution.
+
+Container Background: Pure black #000000 to mimic a terminal. Overflow-Y auto.
+
+Empty State: "STREAM IDLE / awaiting reasoning feed" centered, color #3F3F46.
+
+Active State (Data Feed):
+
+Lines inject at the bottom, forcing scroll to bottom via a useRef hook.
+
+Timestamp format: [HH:MM:SS]. Color #52525B.
+
+Module Tag: PERC, SMC, RISK, EXEC. Color #A3E635.
+
+Message Data: Monospace, color #D4D4D8.
+
+Example Line: [14:10:02] SMC   Identified Bullish Order Block on BTCUSDT at $64,524
+
+5.2 SMC Smart Chart (Bottom Half)
+
+Library: lightweight-charts by TradingView.
+
+Header: "SMC Chart", followed by a 1m timeframe badge.
+
+Chart Config:
+
+layout: { background: { color: 'transparent' }, textColor: '#71717A' }
+
+grid: { vertLines: { visible: false }, horzLines: { color: '#27272A' } }
+
+crosshair: { mode: CrosshairMode.Normal }
+
+Candles: Up color #10B981, Down color #F43F5E. Wick colors match body colors.
+
+Order Block Overlay Logic:
+
+When the mock data generator fires an "Order Block" event, a createPriceLine function is called.
+
+It draws a horizontal line across the chart at the specified price.
+
+Line color: #EAB308 (yellow). Line style: Dotted. Label: OB ▲ $64,524.
+
+6. ZONE 5: POSITIONS & PERFORMANCE LEDGER (Bottom Span)
+
+This spans the entire bottom width of the screen.
+
+6.1 Performance Summary Metrics (The 4 Top Cards)
+
+Four identical flex-1 cards, background #0C0C0F, border #27272A.
+
+Win Rate: * Title: "WIN RATE", Subtext: "Awaiting closed trades" or "6 CLOSED".
+
+Value: 50.0%. Color #A3E635 if > 50%, #F43F5E if < 50%.
+
+Max Drawdown: * Title: "MAX DRAWDOWN", Subtext: "CLOSED-TRADE PNL PEAK".
+
+Value: e.g., -$746.30. Color #F43F5E.
+
+Cumulative PNL: * Title: "CUMULATIVE PNL", Subtext: "REALIZED".
+
+Value: e.g., -$726.60. Color conditionally formats based on positive/negative value.
+
+Open Positions: * Title: "OPEN POSITIONS", Subtext: "3L · 0S" (3 Long, 0 Short).
+
+Value: 3. Color #F8FAFC.
+
+6.2 The Trade Table
+
+Table Header Row: Font size 10px, uppercase, #71717A. Columns: ASSET, SIDE, SIZE, LEV, ENTRY, SL, TP, PNL, LIQ.
+
+Row Data (Active Mock Trades):
+
+Hover State: Row background changes to #18181B.
+
+Asset: SOLUSDT (White).
+
+Side: LONG (Emerald-400) or SHORT (Rose-400).
+
+Size/Entry/SL/TP: Formatted to 2 decimal places. Monospace.
+
+PNL Column: This is the dynamic column. A React useEffect interval updates this number every 500ms by a random variance between -1.50 and +1.50 to simulate live price action. Text is bright green (+$111.10) or red (-$25.77).
+
+7. ZONE 6: EMERGENCY ACTION BAR (Absolute Bottom)
+
+A dedicated strip at the bottom of the screen (h-14), border-top #27272A, flex container aligned right.
+
+7.1 "Flush Logs [F]" Button
+
+Visual: Transparent background, white text. Border 1px solid #3F3F46.
+
+Logic: Clears the React state array holding the Reasoning Terminal messages. Terminal resets to Empty State.
+
+7.2 "Pause Perception [P]" Button
+
+Visual: Dark grey background #18181B, white text.
+
+Logic: Sets isPaused = true. Halts the setInterval data generators. The 3D Agent transitions from Typing back to Sitting Idle. PNL stops fluctuating.
+
+7.3 "Reset Simulation [R]" Button
+
+Visual: Solid Acid Yellow/Green #A3E635, text black.
+
+Logic: Hard resets all React states. Capital input clears. PNL resets to 0. Table is emptied. Chart is wiped.
+
+7.4 "Terminate Agent [T]" Button
+
+Visual: Solid Crimson Red #E11D48, text white.
+
+Hover: #BE123C.
+
+Logic: The "Nuke" button. Instantly closes all open fake positions, calculates a final realized PNL, stops all data feeds, and sets the 3D Agent animation to a completely static "Dead/Frozen" frame.
+
+(End of Volume 1. This concludes the pixel-perfect UX, UI, Color, Typography, and Event Trigger specification. Reply to proceed to Volume 2: The Data Generators & Mock WebSocket Architectures).

@@ -66,7 +66,9 @@ export default function AgentCanvas({ phase, phaseProgress }: AgentCanvasProps) 
       // Earlier we had two Canvases competing for context slots — now there's
       // just this one so we can spend a bit more, but still stay conservative.
       dpr={[1, 1.5]}
-      camera={{ position: [0, 0.5, 5], fov: 42 }}
+      // Start the camera already framing the podium top from the front so the
+      // first paint matches where useFrame lerps to — no opening swoop.
+      camera={{ position: [0, 4.9, 4.8], fov: 42 }}
       gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, powerPreference: 'high-performance' }}
       style={{ position: 'absolute', inset: 0 }}
     >
