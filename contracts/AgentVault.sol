@@ -9,11 +9,22 @@ interface IERC20 {
     function balanceOf(address who) external view returns (uint256);
 }
 
-/// @title AgentVault — Agent.OS paper-trading session vault
+/// @title AgentVault — Agent.OS session vault with on-chain PnL settlement
 /// @notice One session per user. User deposits native ETH or USDC, then every
 ///         agent action (Deploy / OpenTrade / CloseTrade / Terminate) is an
-///         on-chain transaction. The vault NEVER moves funds anywhere except
-///         back to the depositor on Terminate or Withdraw. Owner cannot pull.
+///         on-chain transaction.
+///
+///         Realized PnL on `closeTrade` is settled against a fixed `treasury`
+///         address:
+///           - Losses leave the vault: amount is transferred OUT to treasury
+///             and the user's live balance shrinks.
+///           - Wins enter the vault:   amount is transferred IN from treasury
+///             (ERC20: transferFrom; ETH: drawn from the pre-funded houseEth
+///             pool) and the user's live balance grows.
+///
+///         On `terminate` / `withdraw` the live balance is refunded to the
+///         depositor — so a net winner walks away with more than they put in
+///         and a net loser walks away with less. Owner cannot pull funds.
 contract AgentVault {
     // ─── Types ────────────────────────────────────────────────────────────
     enum SessionStatus { NONE, ACTIVE, PAUSED, TERMINATED }
@@ -21,7 +32,8 @@ contract AgentVault {
 
     struct Session {
         address asset;          // address(0) == native ETH
-        uint256 deposited;      // raw token units
+        uint256 deposited;      // initial deposit (record only — never mutated)
+        uint256 balance;        // live balance after PnL settlement
         uint256 riskBps;        // basis points, 10..500
         uint256 maxDrawdownBps; // basis points, 100..10_000
         SessionStatus status;
@@ -44,6 +56,14 @@ contract AgentVault {
     }
 
     // ─── Storage ──────────────────────────────────────────────────────────
+
+    /// @notice Sink for losses, source for wins. Set once at construction.
+    address public immutable treasury;
+
+    /// @notice Pre-funded ETH liquidity used to pay out ETH-denominated wins.
+    ///         Treasury operator funds it via `houseDepositETH()`.
+    uint256 public houseEth;
+
     mapping(address => Session) public sessions;
     mapping(bytes32 => Trade) public trades;
     mapping(address => bytes32[]) private _userTradeIds;
@@ -53,6 +73,9 @@ contract AgentVault {
     event Deployed(address indexed user, address asset, uint256 amount, uint256 riskBps, uint256 maxDdBps);
     event TradeOpened(bytes32 indexed id, address indexed user, bytes32 symbol, Side side, uint256 sizeUsdt, uint256 entry, uint256 sl, uint256 tp);
     event TradeClosed(bytes32 indexed id, address indexed user, uint256 exitPrice, int256 pnl, string reason);
+    event LossSent(address indexed user, address asset, uint256 amount);
+    event WinReceived(address indexed user, address asset, uint256 amount);
+    event HouseDeposit(address indexed from, uint256 amount);
     event Paused(address indexed user);
     event Resumed(address indexed user);
     event Terminated(address indexed user, uint256 refunded);
@@ -66,6 +89,13 @@ contract AgentVault {
     error TradeNotOpen();
     error NotTradeOwner();
     error TransferFailed();
+    error TreasuryZero();
+    error InsufficientHouseLiquidity();
+
+    constructor(address _treasury) {
+        if (_treasury == address(0)) revert TreasuryZero();
+        treasury = _treasury;
+    }
 
     // ─── Modifiers ────────────────────────────────────────────────────────
     modifier onlyActive() {
@@ -73,15 +103,21 @@ contract AgentVault {
         _;
     }
 
+    // ─── Treasury liquidity ───────────────────────────────────────────────
+
+    /// @notice Pre-fund the vault with native ETH so ETH-denominated wins can
+    ///         be paid out without an external call at close-time. Anyone can
+    ///         call (treasury operator typically does), and the funds become
+    ///         part of `houseEth` — separate accounting from user deposits.
+    function houseDepositETH() external payable {
+        if (msg.value == 0) revert AmountZero();
+        houseEth += msg.value;
+        emit HouseDeposit(msg.sender, msg.value);
+    }
+
     // ─── User actions: every one of these requires a wallet signature ────
 
-    /// @notice Open a session by depositing collateral. Spec §4 Deploy Agent.
-    /// @param asset    address(0) for native ETH, else ERC20 token address (e.g. USDC).
-    /// @param amount   token amount in raw units (wei for ETH, 6-decimals for USDC).
-    /// @param riskBps  Risk per trade in basis points (10 = 0.1%, 500 = 5%).
-    /// @param maxDdBps Max drawdown kill-switch in basis points of deposited capital.
-    /// @dev For native ETH send msg.value == amount. For ERC20 the user must have
-    ///      approved this contract for `amount` first (separate approve() tx).
+    /// @notice Open a session by depositing collateral.
     function deploy(
         address asset,
         uint256 amount,
@@ -103,6 +139,7 @@ contract AgentVault {
         sessions[msg.sender] = Session({
             asset: asset,
             deposited: amount,
+            balance: amount,
             riskBps: riskBps,
             maxDrawdownBps: maxDdBps,
             status: SessionStatus.ACTIVE,
@@ -140,23 +177,46 @@ contract AgentVault {
         emit TradeOpened(id, msg.sender, symbol, side, sizeUsdt, entryPrice, stopLoss, takeProfit);
     }
 
-    /// @notice Close a trade. `pnl` is informational (paper-trade, not settled here).
+    /// @notice Close a trade and SETTLE its PnL on-chain.
+    /// @param  pnl Signed PnL in the SAME raw token units as the deposited
+    ///             asset (wei for ETH, 6dp for USDC, etc.). Negative = loss.
+    /// @dev    Losses are sent to `treasury`, capped at the user's live balance
+    ///         so a single bad trade can drain to zero but never go negative.
+    ///         Wins are pulled from `treasury` (ERC20: requires prior approval;
+    ///         ETH: drawn from `houseEth`).
     function closeTrade(bytes32 id, uint256 exitPrice, int256 pnl, string calldata reason) external {
         Trade storage t = trades[id];
         if (!t.open) revert TradeNotOpen();
         if (t.owner != msg.sender) revert NotTradeOwner();
         t.open = false;
         t.closedAt = uint64(block.timestamp);
+
+        Session storage s = sessions[msg.sender];
+        address asset = s.asset;
+
+        if (pnl < 0) {
+            uint256 loss = uint256(-pnl);
+            uint256 take = loss > s.balance ? s.balance : loss;
+            if (take > 0) {
+                s.balance -= take;
+                _sendToTreasury(asset, take);
+                emit LossSent(msg.sender, asset, take);
+            }
+        } else if (pnl > 0) {
+            uint256 win = uint256(pnl);
+            _pullFromTreasury(asset, win);
+            s.balance += win;
+            emit WinReceived(msg.sender, asset, win);
+        }
+
         emit TradeClosed(id, msg.sender, exitPrice, pnl, reason);
     }
 
-    /// @notice Pause perception. Existing trades stay open; no new ones recorded.
     function pause() external onlyActive {
         sessions[msg.sender].status = SessionStatus.PAUSED;
         emit Paused(msg.sender);
     }
 
-    /// @notice Resume perception after a pause.
     function resume() external {
         Session storage s = sessions[msg.sender];
         if (s.status != SessionStatus.PAUSED) revert NoActiveSession();
@@ -164,8 +224,8 @@ contract AgentVault {
         emit Resumed(msg.sender);
     }
 
-    /// @notice Terminate the session. Closes all open trades, returns deposit.
-    /// @dev Pure refund — paper PnL is not settled on-chain.
+    /// @notice Terminate the session. Abandons any still-open trades (no PnL
+    ///         applied to them) and refunds the live balance to the depositor.
     function terminate() external {
         Session storage s = sessions[msg.sender];
         if (s.status == SessionStatus.NONE || s.status == SessionStatus.TERMINATED) revert NoActiveSession();
@@ -180,41 +240,59 @@ contract AgentVault {
             }
         }
 
-        uint256 refund = s.deposited;
+        uint256 refund = s.balance;
         address asset = s.asset;
-        s.deposited = 0;
+        s.balance = 0;
         s.status = SessionStatus.TERMINATED;
         s.terminatedAt = uint64(block.timestamp);
 
-        if (refund > 0) {
-            if (asset == address(0)) {
-                (bool ok, ) = msg.sender.call{value: refund}("");
-                if (!ok) revert TransferFailed();
-            } else {
-                bool ok = IERC20(asset).transfer(msg.sender, refund);
-                if (!ok) revert TransferFailed();
-            }
-        }
+        if (refund > 0) _payUser(asset, refund);
 
         emit Terminated(msg.sender, refund);
     }
 
-    /// @notice Withdraw remaining deposit from a TERMINATED session (rescue path).
     function withdraw() external {
         Session storage s = sessions[msg.sender];
         if (s.status != SessionStatus.TERMINATED) revert NoActiveSession();
-        uint256 amt = s.deposited;
+        uint256 amt = s.balance;
         if (amt == 0) revert AmountZero();
-        s.deposited = 0;
-        address asset = s.asset;
+        s.balance = 0;
+        _payUser(s.asset, amt);
+        emit Withdrawn(msg.sender, amt);
+    }
+
+    // ─── Internal settlement helpers ──────────────────────────────────────
+
+    function _sendToTreasury(address asset, uint256 amount) internal {
         if (asset == address(0)) {
-            (bool ok, ) = msg.sender.call{value: amt}("");
+            (bool ok, ) = treasury.call{value: amount}("");
             if (!ok) revert TransferFailed();
         } else {
-            bool ok = IERC20(asset).transfer(msg.sender, amt);
+            bool ok = IERC20(asset).transfer(treasury, amount);
             if (!ok) revert TransferFailed();
         }
-        emit Withdrawn(msg.sender, amt);
+    }
+
+    function _pullFromTreasury(address asset, uint256 amount) internal {
+        if (asset == address(0)) {
+            // ETH wins are drawn from the pre-funded house pool — no external
+            // call needed, the ETH already lives in this contract.
+            if (amount > houseEth) revert InsufficientHouseLiquidity();
+            houseEth -= amount;
+        } else {
+            bool ok = IERC20(asset).transferFrom(treasury, address(this), amount);
+            if (!ok) revert TransferFailed();
+        }
+    }
+
+    function _payUser(address asset, uint256 amount) internal {
+        if (asset == address(0)) {
+            (bool ok, ) = msg.sender.call{value: amount}("");
+            if (!ok) revert TransferFailed();
+        } else {
+            bool ok = IERC20(asset).transfer(msg.sender, amount);
+            if (!ok) revert TransferFailed();
+        }
     }
 
     // ─── Views ────────────────────────────────────────────────────────────
@@ -228,7 +306,8 @@ contract AgentVault {
         return sessions[user].status == SessionStatus.ACTIVE;
     }
 
-    // Native ETH safety — direct sends without calling deploy() are rejected.
-    receive() external payable { revert("use deploy()"); }
+    // Native ETH safety — direct sends without calling deploy() or
+    // houseDepositETH() are rejected so accidental transfers don't get stuck.
+    receive() external payable { revert("use deploy() or houseDepositETH()"); }
     fallback() external payable { revert("unknown selector"); }
 }

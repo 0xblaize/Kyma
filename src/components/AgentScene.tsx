@@ -146,8 +146,10 @@ export default function AgentScene({ phase, phaseProgress }: AgentSceneProps) {
     tmp2.set(focus.x + off.x, focus.y + off.y, focus.z + off.z)
     // PODIUM_TOP_FOCUS is already at body center; the seat/feet focuses for
     // other phases need a body-height nudge so the camera doesn't aim at the
-    // floor / under the chair.
-    const lookYAdj = phase <= PHASE.morph ? 0 : 0.9
+    // floor / under the chair. Seated phases need a taller nudge because the
+    // agent is now lifted ≈0.5 onto the chair seat — without it the camera
+    // points at the legs instead of the torso/screens.
+    const lookYAdj = phase <= PHASE.morph ? 0 : seated ? 1.4 : 0.9
     lookTarget.set(focus.x, focus.y + lookYAdj, focus.z)
 
     camera.position.lerp(tmp2, 0.1)
@@ -158,7 +160,12 @@ export default function AgentScene({ phase, phaseProgress }: AgentSceneProps) {
     if (!g) return
 
     if (seated) {
-      g.position.lerp(SEAT_POS, 0.15)
+      // Lift the agent group ≈ chair-seat height so the Mixamo sit clip lands
+      // the hips ON the seat instead of in a crouch beside it. The chair seat
+      // top in DeskRig local is y≈0.58; the value below was tuned so the
+      // skeleton's resting hip position aligns with the cushion.
+      tmp.set(SEAT_POS.x, SEAT_POS.y + 0.5, SEAT_POS.z)
+      g.position.lerp(tmp, 0.15)
     } else {
       const w = walkProgress(phase, phaseProgress)
       journeyPoint(w, tmp)

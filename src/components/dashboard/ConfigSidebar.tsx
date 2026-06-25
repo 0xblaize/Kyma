@@ -54,7 +54,7 @@ export default function ConfigSidebar() {
   const assetUnitsLabel = selectedAsset
 
   return (
-    <aside className="flex h-full flex-col gap-3 border-l border-line bg-surface-1 p-3">
+    <aside className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto border-l border-line bg-surface-1 p-3 [scrollbar-width:thin]">
       {/* Panel header */}
       <div className="flex h-8 items-center justify-between border-b border-line pb-2">
         <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-ink-mute">

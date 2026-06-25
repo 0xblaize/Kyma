@@ -2,6 +2,34 @@
 // `as const` is required so wagmi/viem infer the function signatures.
 
 export const agentVaultAbi = [
+  // ── constructor (for reference; viem ignores) ───────────────────────
+  {
+    type: 'constructor',
+    stateMutability: 'nonpayable',
+    inputs: [{ name: '_treasury', type: 'address' }],
+  },
+  // ── treasury liquidity ──────────────────────────────────────────────
+  {
+    type: 'function',
+    name: 'houseDepositETH',
+    stateMutability: 'payable',
+    inputs: [],
+    outputs: [],
+  },
+  {
+    type: 'function',
+    name: 'treasury',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ type: 'address' }],
+  },
+  {
+    type: 'function',
+    name: 'houseEth',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ type: 'uint256' }],
+  },
   // ── deploy ───────────────────────────────────────────────────────────
   {
     type: 'function',
@@ -60,6 +88,7 @@ export const agentVaultAbi = [
         components: [
           { name: 'asset', type: 'address' },
           { name: 'deposited', type: 'uint256' },
+          { name: 'balance', type: 'uint256' },
           { name: 'riskBps', type: 'uint256' },
           { name: 'maxDrawdownBps', type: 'uint256' },
           { name: 'status', type: 'uint8' },
@@ -119,6 +148,34 @@ export const agentVaultAbi = [
     inputs: [
       { name: 'user', type: 'address', indexed: true },
       { name: 'refunded', type: 'uint256', indexed: false },
+    ],
+  },
+  // ── settlement events: surfaced so dashboards / explorers can show
+  //    exactly where each tx's PnL went.
+  {
+    type: 'event',
+    name: 'LossSent',
+    inputs: [
+      { name: 'user', type: 'address', indexed: true },
+      { name: 'asset', type: 'address', indexed: false },
+      { name: 'amount', type: 'uint256', indexed: false },
+    ],
+  },
+  {
+    type: 'event',
+    name: 'WinReceived',
+    inputs: [
+      { name: 'user', type: 'address', indexed: true },
+      { name: 'asset', type: 'address', indexed: false },
+      { name: 'amount', type: 'uint256', indexed: false },
+    ],
+  },
+  {
+    type: 'event',
+    name: 'HouseDeposit',
+    inputs: [
+      { name: 'from', type: 'address', indexed: true },
+      { name: 'amount', type: 'uint256', indexed: false },
     ],
   },
 ] as const
