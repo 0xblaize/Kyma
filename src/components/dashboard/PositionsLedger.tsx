@@ -15,14 +15,14 @@ interface SummaryCardProps {
 
 function SummaryCard({ title, subtext, value, valueClassName }: SummaryCardProps) {
   return (
-    <div className="flex flex-1 flex-col gap-1.5 rounded-md border border-line bg-surface-1 px-4 py-3">
-      <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-ink-mute">
+    <div className="flex flex-1 flex-col gap-1 rounded-md border border-line bg-surface-1 px-3 py-2">
+      <span className="text-[9.5px] font-semibold uppercase tracking-[0.2em] text-ink-mute">
         {title}
       </span>
-      <span className={`font-mono text-[22px] leading-none ${valueClassName ?? 'text-ink-dim'}`}>
+      <span className={`font-mono text-[17px] leading-none ${valueClassName ?? 'text-ink-dim'}`}>
         {value}
       </span>
-      <span className="text-[10px] uppercase tracking-[0.15em] text-ink-fade">{subtext}</span>
+      <span className="text-[9px] uppercase tracking-[0.15em] text-ink-fade">{subtext}</span>
     </div>
   )
 }
@@ -69,18 +69,18 @@ export default function PositionsLedger() {
     cumulativePnl > 0 ? 'text-acid' : cumulativePnl < 0 ? 'text-loss' : 'text-ink-dim'
 
   return (
-    <section className="flex flex-col gap-3 border-t border-line bg-surface-0 px-6 py-4">
+    <section className="flex flex-col gap-2 border-t border-line bg-surface-0 px-4 py-2.5">
       <div className="flex items-center justify-between">
-        <span className="text-[12px] font-semibold tracking-tight text-ink">
+        <span className="text-[11px] font-semibold tracking-tight text-ink">
           Positions &amp; Performance
         </span>
-        <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-fade">
+        <span className="font-mono text-[9.5px] uppercase tracking-[0.2em] text-ink-fade">
           paper · auto-managed · realised {fmtUsd(realizedPnl, true)}
         </span>
       </div>
 
       {/* 6.1 Performance Summary Metrics */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
         <SummaryCard
           title="Win Rate"
           subtext={closedTradeCount === 0 ? 'Awaiting closed trades' : `${closedTradeCount} closed`}
@@ -115,7 +115,7 @@ export default function PositionsLedger() {
               {columns.map((h, i) => (
                 <th
                   key={h}
-                  className={`px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-ink-mute ${
+                  className={`px-2.5 py-1.5 text-[9.5px] font-semibold uppercase tracking-[0.18em] text-ink-mute ${
                     i >= 2 ? 'text-right' : ''
                   }`}
                 >
@@ -129,7 +129,7 @@ export default function PositionsLedger() {
               <tr>
                 <td
                   colSpan={columns.length}
-                  className="px-3 py-10 text-center font-mono text-[10px] uppercase tracking-[0.25em] text-ink-fade"
+                  className="px-3 py-7 text-center font-mono text-[9.5px] uppercase tracking-[0.25em] text-ink-fade"
                 >
                   no open positions · awaiting execution feed
                 </td>
@@ -143,29 +143,29 @@ export default function PositionsLedger() {
                     key={p.tradeId}
                     className="border-b border-line/60 transition hover:bg-surface-2/60 last:border-b-0"
                   >
-                    <td className="px-3 py-2 text-[12px] text-ink">{p.symbol}</td>
-                    <td className={`px-3 py-2 text-[11px] font-semibold ${sideClass}`}>
+                    <td className="px-2.5 py-1.5 text-[11px] text-ink">{p.symbol}</td>
+                    <td className={`px-2.5 py-1.5 text-[10.5px] font-semibold ${sideClass}`}>
                       {p.side}
                     </td>
-                    <td className="px-3 py-2 text-right font-mono text-[11px] text-ink-dim">
+                    <td className="px-2.5 py-1.5 text-right font-mono text-[10.5px] text-ink-dim">
                       ${p.sizeUsdt.toFixed(2)}
                     </td>
-                    <td className="px-3 py-2 text-right font-mono text-[11px] text-ink-dim">
+                    <td className="px-2.5 py-1.5 text-right font-mono text-[10.5px] text-ink-dim">
                       {p.leverage}x
                     </td>
-                    <td className="px-3 py-2 text-right font-mono text-[11px] text-ink-dim">
+                    <td className="px-2.5 py-1.5 text-right font-mono text-[10.5px] text-ink-dim">
                       {fmtPrice(p.entryPrice)}
                     </td>
-                    <td className="px-3 py-2 text-right font-mono text-[11px] text-loss/80">
+                    <td className="px-2.5 py-1.5 text-right font-mono text-[10.5px] text-loss/80">
                       {fmtPrice(p.stopLoss)}
                     </td>
-                    <td className="px-3 py-2 text-right font-mono text-[11px] text-profit/80">
+                    <td className="px-2.5 py-1.5 text-right font-mono text-[10.5px] text-profit/80">
                       {fmtPrice(p.takeProfit)}
                     </td>
-                    <td className={`px-3 py-2 text-right font-mono text-[12px] font-semibold ${pnlClass}`}>
+                    <td className={`px-2.5 py-1.5 text-right font-mono text-[11px] font-semibold ${pnlClass}`}>
                       {fmtUsd(p.pnl, true)}
                     </td>
-                    <td className="px-3 py-2 text-right font-mono text-[11px] text-ink-fade">
+                    <td className="px-2.5 py-1.5 text-right font-mono text-[10.5px] text-ink-fade">
                       {fmtPrice(p.liqPrice)}
                     </td>
                   </tr>

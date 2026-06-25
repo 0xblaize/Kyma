@@ -54,7 +54,7 @@ export default function ConfigSidebar() {
   const assetUnitsLabel = selectedAsset
 
   return (
-    <aside className="flex h-full flex-col gap-4 border-l border-line bg-surface-1 p-4">
+    <aside className="flex h-full flex-col gap-3 border-l border-line bg-surface-1 p-3">
       {/* Panel header */}
       <div className="flex h-8 items-center justify-between border-b border-line pb-2">
         <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-ink-mute">
@@ -68,7 +68,7 @@ export default function ConfigSidebar() {
       {/* Asset toggle — drives MAX, units, and which vault path runs */}
       <div className="flex flex-col gap-2">
         <span className="text-[11px] text-ink-dim">Collateral asset</span>
-        <div className="flex h-9 items-center rounded-md border border-line bg-surface-0 p-1 text-[11px]">
+        <div className="flex h-8 items-center rounded-md border border-line bg-surface-0 p-1 text-[10.5px]">
           <AssetPill
             value="ETH"
             current={selectedAsset}
@@ -112,7 +112,7 @@ export default function ConfigSidebar() {
             disabled={isLive}
             value={allocatedCapital === 0 ? '' : allocatedCapital}
             onChange={(e) => setAllocatedCapital(Number(e.target.value))}
-            className={`h-10 w-full rounded-md border bg-surface-0 pl-14 pr-14 font-mono text-[13px] text-ink outline-none transition focus:ring-1 disabled:cursor-not-allowed disabled:opacity-60 ${
+            className={`h-9 w-full rounded-md border bg-surface-0 pl-12 pr-12 font-mono text-[12.5px] text-ink outline-none transition focus:ring-1 disabled:cursor-not-allowed disabled:opacity-60 ${
               overflow
                 ? 'border-loss focus:border-loss focus:ring-loss'
                 : 'border-line focus:border-acid focus:ring-acid'
@@ -228,7 +228,7 @@ export default function ConfigSidebar() {
         type="button"
         disabled={!canDeploy}
         onClick={() => void deploy()}
-        className={`group flex h-12 w-full items-center justify-center gap-2 rounded-md text-[14px] font-bold tracking-tight transition ${
+        className={`group flex h-10 w-full items-center justify-center gap-2 rounded-md text-[13px] font-bold tracking-tight transition ${
           isLive
             ? 'bg-surface-3 text-ink-fade cursor-not-allowed'
             : canDeploy

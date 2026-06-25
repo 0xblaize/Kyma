@@ -33,7 +33,7 @@ function CtrlButton({ label, shortcut, variant, active, disabled, onClick }: But
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`group flex h-9 items-center justify-center gap-2 rounded-md px-3.5 text-[11px] font-semibold uppercase tracking-[0.08em] transition disabled:cursor-not-allowed disabled:opacity-50 ${VARIANT[variant]} ${
+      className={`group flex h-7 items-center justify-center gap-1.5 rounded-md px-2.5 text-[10.5px] font-semibold uppercase tracking-[0.08em] transition disabled:cursor-not-allowed disabled:opacity-50 ${VARIANT[variant]} ${
         active ? 'ring-1 ring-warn/60' : ''
       }`}
     >
@@ -74,7 +74,7 @@ export default function ControlStrip() {
   }, [terminate, togglePaused, flushLogs, reset, txBusy])
 
   return (
-    <footer className="flex h-14 items-center justify-between gap-3 border-t border-line bg-surface-1 px-6">
+    <footer className="flex h-[44px] items-center justify-between gap-3 border-t border-line bg-surface-1 px-4">
       <div className="flex items-center gap-2.5">
         <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-mute">
           Emergency controls

@@ -88,7 +88,7 @@ export default function WalletHub() {
         <button
           type="button"
           onClick={() => setPickerOpen(true)}
-          className="group flex h-10 items-center gap-2.5 rounded-xl bg-acid px-4 text-[12px] font-semibold tracking-tight text-black shadow-[0_8px_24px_-12px_rgba(163,230,53,0.6)] transition hover:bg-[#bef264] active:bg-[#84cc16]"
+          className="group flex h-9 items-center gap-2.5 rounded-xl bg-acid px-4 text-[12px] font-semibold tracking-tight text-black shadow-[0_8px_24px_-12px_rgba(163,230,53,0.6)] transition hover:bg-[#bef264] active:bg-[#84cc16]"
         >
           <span className="relative flex h-2 w-2">
             <span className="absolute inset-0 rounded-full bg-black/40 animate-ping" />
@@ -117,7 +117,7 @@ export default function WalletHub() {
           type="button"
           disabled={isSwitching}
           onClick={() => switchChain({ chainId: supportedChain.id })}
-          className="flex h-10 items-center gap-2 rounded-xl border border-warn/40 bg-warn/10 px-3.5 text-[11px] font-semibold tracking-tight text-warn transition hover:bg-warn/15 disabled:opacity-60"
+          className="flex h-9 items-center gap-2 rounded-xl border border-warn/40 bg-warn/10 px-3.5 text-[11px] font-semibold tracking-tight text-warn transition hover:bg-warn/15 disabled:opacity-60"
         >
           <span className="h-1.5 w-1.5 rounded-full bg-warn" />
           {isSwitching ? 'Switching…' : 'Switch to Sepolia'}
@@ -125,7 +125,7 @@ export default function WalletHub() {
         <button
           type="button"
           onClick={() => disconnect()}
-          className="flex h-10 items-center rounded-xl border border-line bg-surface-1 px-3 text-[11px] font-medium text-ink-dim transition hover:border-white/15 hover:text-ink"
+          className="flex h-9 items-center rounded-xl border border-line bg-surface-1 px-3 text-[11px] font-medium text-ink-dim transition hover:border-white/15 hover:text-ink"
         >
           Disconnect
         </button>
@@ -139,19 +139,19 @@ export default function WalletHub() {
       <button
         type="button"
         onClick={() => setMenuOpen((v) => !v)}
-        className="group flex h-10 items-center gap-3 rounded-xl border border-line bg-gradient-to-r from-surface-1 via-surface-1 to-surface-2 px-1 pr-3 transition hover:border-acid/30"
+        className="group flex h-9 items-center gap-3 rounded-xl border border-line bg-gradient-to-r from-surface-1 via-surface-1 to-surface-2 px-1 pr-3 transition hover:border-acid/30"
       >
-        <span className="flex h-8 items-center gap-2 rounded-lg bg-gradient-to-br from-acid/20 via-acid/5 to-transparent px-2.5">
+        <span className="flex h-7 items-center gap-2 rounded-lg bg-gradient-to-br from-acid/20 via-acid/5 to-transparent px-2.5">
           <span className="h-1.5 w-1.5 rounded-full bg-profit shadow-[0_0_8px_rgba(52,211,153,0.6)]" />
-          <span className="font-mono text-[12px] font-medium tracking-tight text-ink">
+          <span className="font-mono text-[11px] font-medium tracking-tight text-ink">
             {shortenAddress(address)}
           </span>
         </span>
         <span className="flex flex-col items-end leading-none">
-          <span className="text-[9px] font-medium uppercase tracking-[0.18em] text-ink-mute">
+          <span className="text-[8.5px] font-medium uppercase tracking-[0.18em] text-ink-mute">
             Sepolia
           </span>
-          <span className="mt-0.5 font-mono text-[12px] text-ink">
+          <span className="mt-0.5 font-mono text-[11px] text-ink">
             {balance ? `${formatBalance(balance.value, balance.decimals)} ${balance.symbol}` : '—'}
           </span>
         </span>
@@ -275,11 +275,16 @@ function MenuItem({ label, icon, onClick, danger }: MenuItemProps) {
 
 // ─── Connector picker modal ────────────────────────────────────────────────
 
+// Use wagmi's own connector type so `onPick` hands back something `connect()`
+// will accept. The previous narrowed shape (uid/id/name/icon) was missing the
+// runtime methods wagmi's `Connector` carries, which broke the build.
+type WagmiConnector = ReturnType<typeof useConnect>['connectors'][number]
+
 interface PickerProps {
-  connectors: readonly { uid: string; id: string; name: string; icon?: string }[]
+  connectors: readonly WagmiConnector[]
   isPending: boolean
   error?: string
-  onPick: (c: PickerProps['connectors'][number]) => void
+  onPick: (c: WagmiConnector) => void
   onClose: () => void
 }
 

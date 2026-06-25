@@ -28,11 +28,11 @@ function MockEngineMount() {
 
 export default function DashboardShell() {
   return (
-    <main className="grid h-screen w-full grid-rows-[64px_minmax(0,1fr)_auto_56px] bg-surface-0 text-ink">
+    <main className="grid h-screen w-full grid-rows-[52px_minmax(0,1fr)_auto_44px] bg-surface-0 text-ink">
       {DEMO_FALLBACK && <MockEngineMount />}
       <HeaderBar />
 
-      <section className="grid min-h-0 grid-cols-1 lg:grid-cols-[minmax(0,1.45fr)_minmax(480px,1.25fr)_320px]">
+      <section className="grid min-h-0 grid-cols-1 lg:grid-cols-[minmax(0,1.45fr)_minmax(400px,1.25fr)_272px]">
         <AgentViewport />
         <div className="grid min-h-0 grid-rows-[minmax(0,0.8fr)_minmax(0,1.4fr)] border-l border-line">
           <ReasoningTerminal />
