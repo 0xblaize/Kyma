@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { ContactShadows, Environment } from '@react-three/drei'
 import * as THREE from 'three'
-import AgentModel from '@/components/AgentModel'
+import DashboardAgentModel from './DashboardAgentModel'
 import type { AgentState } from '@/lib/clips'
 
 interface Props {
@@ -34,9 +34,18 @@ function MiniDesk({ glow }: { glow: number }) {
           <meshStandardMaterial color="#0a0c11" metalness={0.7} roughness={0.35} />
         </mesh>
       ))}
-      {/* triple monitors */}
+      {/* Triple monitors.
+          The agent sits at the chair (z=0) facing +Z. The desk is at +Z 1.05,
+          so monitors live INSIDE the desk group at desk-local z=-0.12
+          (i.e. on the chair-facing edge of the desk). Screens must face -Z
+          so the mannequin reads them.
+
+          Math.PI on the Y rotation flips the monitor group 180° so the
+          planeGeometry's outward normal (+Z by default) ends up pointing
+          world -Z toward the chair. The +x*0.28 toe-in then angles the
+          side monitors inward toward where the agent's eyes sit. */}
       {[-0.74, 0, 0.74].map((x, i) => (
-        <group key={i} position={[x, 1.52, -0.12]} rotation={[0, -x * 0.28, 0]}>
+        <group key={i} position={[x, 1.52, -0.12]} rotation={[0, Math.PI + x * 0.28, 0]}>
           <mesh castShadow>
             <boxGeometry args={[0.7, 0.42, 0.04]} />
             <meshStandardMaterial color="#05060a" metalness={0.5} roughness={0.4} />
@@ -56,13 +65,15 @@ function MiniDesk({ glow }: { glow: number }) {
           </mesh>
         </group>
       ))}
-      {/* keyboard hint */}
-      <mesh position={[0, 1.07, 0.28]} castShadow>
+      {/* Keyboard sits on the NEAR edge of the desk (chair side), not the
+          far edge. Desk frame -Z = toward agent. */}
+      <mesh position={[0, 1.07, -0.28]} castShadow>
         <boxGeometry args={[0.7, 0.025, 0.18]} />
         <meshStandardMaterial color="#0a0c11" metalness={0.6} roughness={0.4} />
       </mesh>
-      {/* monitor fill */}
-      <pointLight position={[0, 1.55, 0.4]} color="#a7f3d0" intensity={glow * 1.6} distance={3.4} />
+      {/* Screen fill light — placed on the chair side of the monitors so the
+          green spill lands on the agent's face, not into the void behind. */}
+      <pointLight position={[0, 1.55, -0.4]} color="#a7f3d0" intensity={glow * 1.6} distance={3.4} />
     </group>
   )
 }
@@ -138,8 +149,12 @@ export default function DashboardAgentScene({ state, screenGlow }: Props) {
       <Chair />
       <MiniDesk glow={screenGlow} />
 
-      <group ref={ref} position={[0, 0.62, 0]} rotation={[0, 0, 0]}>
-        <AgentModel state={state} targetHeight={1.55} />
+      {/* Agent group y matches the chair seat MESH CENTER (0.55) — mirrors the
+          pattern in AgentScene.tsx where the seated agent group lifts to
+          SEAT_POS.y + 0.5 (seat-center). The sit_idle clip's hip offset then
+          drops the hips onto the seat cushion rather than the backrest. */}
+      <group ref={ref} position={[0, 0.55, 0]} rotation={[0, 0, 0]}>
+        <DashboardAgentModel state={state} targetHeight={1.55} />
       </group>
 
       {/* Soft floor with a contact shadow under the rig. */}
