@@ -6,7 +6,32 @@ import {
   type LogModule,
   type LogType,
   type Position,
+  type RiskTier,
 } from './useDashboardState'
+
+// ─────────────────────────────────────────────────────────────────────────
+// Real perp universe — Binance/Bybit USDT-margined perpetual symbols. The
+// agent scans every one of these each cycle, scores the setups, and only
+// enters the strongest. Per-symbol vol multiplier is calibrated to typical
+// 1m ATR so the random walk feels right for each asset (BTC ~tight, DOGE
+// ~loose). Reference price seeds the walk on boot/reset only.
+// ─────────────────────────────────────────────────────────────────────────
+interface MarketDef {
+  symbol: string
+  seed: number          // reference spot price ($) — drift target
+  vol: number           // per-tick noise stddev as fraction of seed
+}
+
+const MARKETS: MarketDef[] = [
+  { symbol: 'BTCUSDT',  seed: 64_500, vol: 0.0009 },
+  { symbol: 'ETHUSDT',  seed: 3_180,  vol: 0.0011 },
+  { symbol: 'SOLUSDT',  seed: 148,    vol: 0.0016 },
+  { symbol: 'BNBUSDT',  seed: 575,    vol: 0.0010 },
+  { symbol: 'XRPUSDT',  seed: 0.52,   vol: 0.0014 },
+  { symbol: 'DOGEUSDT', seed: 0.121,  vol: 0.0021 },
+  { symbol: 'AVAXUSDT', seed: 26.4,   vol: 0.0018 },
+  { symbol: 'LINKUSDT', seed: 13.8,   vol: 0.0017 },
+]
 
 // ─────────────────────────────────────────────────────────────────────────
 // useMockEngine — the Vol.2 §4 Hackathon Failsafe.
@@ -75,6 +100,39 @@ function randTradeId() {
   return 'trd_' + Math.random().toString(36).slice(2, 8)
 }
 
+// Display helpers — qty digits scale with the asset's price (5.42 SOL but
+// 0.00342 BTC). fmtPriceSymbol picks digits per symbol so cents don't get
+// rounded off on DOGE/XRP.
+function fmtQty(qty: number) {
+  if (qty >= 1_000) return qty.toFixed(0)
+  if (qty >= 1) return qty.toFixed(3)
+  if (qty >= 0.001) return qty.toFixed(5)
+  return qty.toFixed(8)
+}
+function fmtPriceFor(price: number) {
+  if (price >= 1_000) return price.toFixed(2)
+  if (price >= 10) return price.toFixed(3)
+  if (price >= 1) return price.toFixed(4)
+  return price.toFixed(5)
+}
+
+// Capital → concurrent-position cap. Larger books support more parallel
+// setups; tiny books concentrate into one high-conviction trade.
+function maxPositionsFor(capital: number) {
+  if (capital < 500) return 1
+  if (capital < 2_000) return 2
+  if (capital < 5_000) return 3
+  if (capital < 10_000) return 4
+  return 5
+}
+
+interface MarketState {
+  seed: number
+  vol: number
+  price: number
+  momentum: number    // EMA of pct-change; sign = directional bias
+}
+
 export function useMockEngine() {
   const {
     lifecycle,
@@ -95,6 +153,11 @@ export function useMockEngine() {
   // restarting every tick — re-binding setInterval would drop sub-second
   // precision. Refs sync from props above each render.
   const priceRef = useRef<number>(START_PRICE)
+  const marketsRef = useRef<Record<string, MarketState>>(
+    Object.fromEntries(
+      MARKETS.map((m) => [m.symbol, { seed: m.seed, vol: m.vol, price: m.seed, momentum: 0 }]),
+    ),
+  )
   const positionsRef = useRef<Position[]>([])
   const cumulativeRealizedRef = useRef<number>(0)
   const capitalRef = useRef<number>(allocatedCapital)
@@ -108,6 +171,9 @@ export function useMockEngine() {
   // Re-seed price on reset so the chart doesn't drift forever.
   useEffect(() => {
     priceRef.current = START_PRICE
+    for (const m of MARKETS) {
+      marketsRef.current[m.symbol] = { seed: m.seed, vol: m.vol, price: m.seed, momentum: 0 }
+    }
     positionsRef.current = []
     cumulativeRealizedRef.current = 0
   }, [resetNonce])
@@ -115,13 +181,24 @@ export function useMockEngine() {
   useEffect(() => {
     if (lifecycle !== 'active') return
 
-    // ── 1. Market ticks — 1Hz (Vol.2 §2 event 1) ─────────────────────────
+    // ── 1. Market ticks — 1Hz across the whole basket ────────────────────
+    // Walk every symbol so the scanner has live data on each. The chart is
+    // anchored to BTCUSDT (its single price series), but every position
+    // marks against its own symbol's price ref below.
     const tickTimer = setInterval(() => {
-      // Random walk with mean-reverting drift toward START_PRICE so the
-      // chart stays visually anchored over a long demo.
-      const drift = (START_PRICE - priceRef.current) * 0.002
-      const noise = (Math.random() - 0.5) * 60
-      priceRef.current = Math.max(1_000, priceRef.current + drift + noise)
+      for (const m of MARKETS) {
+        const s = marketsRef.current[m.symbol]
+        const drift = (s.seed - s.price) * 0.002
+        const noise = (Math.random() - 0.5) * s.seed * s.vol * 2
+        const next = Math.max(s.seed * 0.4, s.price + drift + noise)
+        // EMA of pct-change → momentum signal used by the scanner. Larger
+        // |momentum| = stronger directional bias = better setup score.
+        const pct = (next - s.price) / Math.max(1e-9, s.price)
+        s.momentum = s.momentum * 0.88 + pct * 0.12
+        s.price = next
+      }
+      // Keep BTC as the chart-facing tick so SMCChart stays coherent.
+      priceRef.current = marketsRef.current['BTCUSDT'].price
       pushTick(priceRef.current)
     }, 1000)
 
@@ -182,21 +259,60 @@ export function useMockEngine() {
       })
     }, 15_000)
 
-    // ── 4. Trade execution — every ~12s while under position cap ─────────
+    // ── 4. Trade execution — basket scanner, every ~12s ──────────────────
+    // The agent scores every market by |momentum| × vol-bonus, skips any
+    // symbol already held (no double-stacking), and enters the best setup.
+    // Concurrent-position cap scales with allocated capital — a $200 book
+    // concentrates into one trade; a $20k book runs five in parallel.
     const tradeTimer = setInterval(() => {
-      if (positionsRef.current.length >= 5) return
-      const side: 'LONG' | 'SHORT' = Math.random() > 0.45 ? 'LONG' : 'SHORT'
-      // Position size from spec §4.2 logic: capital × risk%. Lev 5–15x.
-      const sizeUsdt = Math.max(50, capitalRef.current * (riskRef.current / 100) * 20)
-      const leverage = 5 + Math.floor(Math.random() * 11)
-      const entryPrice = priceRef.current
-      const slDistance = entryPrice * 0.01     // 1% stop
-      const tpDistance = entryPrice * 0.022    // 2.2% target → ~2.2 RR
+      if (capitalRef.current <= 0) return
+      const cap = maxPositionsFor(capitalRef.current)
+      if (positionsRef.current.length >= cap) return
+
+      const held = new Set(positionsRef.current.map((p) => p.symbol))
+      const candidates = MARKETS
+        .filter((m) => !held.has(m.symbol))
+        .map((m) => {
+          const s = marketsRef.current[m.symbol]
+          // Score = signal strength × vol-tilt. Higher-vol books pay more
+          // when the directional read is right, so we tilt toward them
+          // when momentum is comparable.
+          const score = Math.abs(s.momentum) * (1 + m.vol * 60)
+          return { def: m, state: s, score }
+        })
+        .sort((a, b) => b.score - a.score)
+      if (!candidates.length) return
+      const pick_ = candidates[0]
+      // Floor on score so we don't open a trade on noise alone.
+      if (pick_.score < 0.0004) return
+
+      const side: 'LONG' | 'SHORT' = pick_.state.momentum >= 0 ? 'LONG' : 'SHORT'
+      const entryPrice = pick_.state.price
+
+      // Regression-aware sizing: when the setup is on a high-vol book AND
+      // the read is strong, the bot expects a deeper retrace before the
+      // pump. It commits more notional and widens SL so a normal wick
+      // can't take it out — but drops leverage so liquidation stays clear.
+      const aggressive = pick_.def.vol >= 0.0015 && pick_.score > 0.0009
+      const tier: RiskTier = aggressive ? 'AGGRESSIVE' : 'BASE'
+
+      const baseSize = Math.max(50, capitalRef.current * (riskRef.current / 100) * 20)
+      const sizeUsdt = tier === 'AGGRESSIVE' ? baseSize * 2.2 : baseSize
+      const leverage = tier === 'AGGRESSIVE'
+        ? 3 + Math.floor(Math.random() * 4)     // 3–6x — survives the dip
+        : 5 + Math.floor(Math.random() * 11)    // 5–15x — standard
+      const slPct = tier === 'AGGRESSIVE' ? 0.025 : 0.01
+      const tpPct = tier === 'AGGRESSIVE' ? 0.05 : 0.022
+      const slDistance = entryPrice * slPct
+      const tpDistance = entryPrice * tpPct
+      const qty = (sizeUsdt * leverage) / entryPrice
+
       const pos: Position = {
         tradeId: randTradeId(),
-        symbol: 'BTCUSDT',
+        symbol: pick_.def.symbol,
         side,
         sizeUsdt,
+        qty,
         leverage,
         entryPrice,
         stopLoss: side === 'LONG' ? entryPrice - slDistance : entryPrice + slDistance,
@@ -206,25 +322,33 @@ export function useMockEngine() {
           : entryPrice * (1 + 1 / leverage),
         markPrice: entryPrice,
         pnl: 0,
+        riskTier: tier,
       }
       positionsRef.current = [...positionsRef.current, pos]
       openPosition(pos)
       pushLog({
         time: hhmmss(),
+        module: 'PERC',
+        message: `Top setup → ${pos.symbol} · momentum ${(pick_.state.momentum * 100).toFixed(3)}% · ${tier === 'AGGRESSIVE' ? 'regression-buffered' : 'baseline'}`,
+        type: 'INFO',
+      })
+      pushLog({
+        time: hhmmss(),
         module: 'EXEC',
-        message: `${side} ${pos.symbol} · ${pos.leverage}x · size $${pos.sizeUsdt.toFixed(2)} @ $${entryPrice.toFixed(2)}`,
+        message: `${side} ${pos.symbol} · qty ${fmtQty(qty)} · ${pos.leverage}x · $${sizeUsdt.toFixed(2)} notional @ ${fmtPriceFor(entryPrice)}${tier === 'AGGRESSIVE' ? ' · SL widened for regression' : ''}`,
         type: 'SUCCESS',
       })
     }, 12_000)
 
     // ── 5. Portfolio updates — 500ms (Spec §6.2 PNL flicker) ─────────────
     const portfolioTimer = setInterval(() => {
-      const price = priceRef.current
       const survivors: Position[] = []
       let unrealized = 0
 
       for (const p of positionsRef.current) {
-        // Mark-to-market: PNL per position uses notional = size × leverage.
+        // Mark each position against its OWN symbol's live price — no
+        // more cross-pollinating BTC ticks into SOL positions.
+        const price = marketsRef.current[p.symbol]?.price ?? p.markPrice
         const notional = p.sizeUsdt * p.leverage
         const change = (price - p.entryPrice) / p.entryPrice
         const pnl = (p.side === 'LONG' ? change : -change) * notional
@@ -289,13 +413,13 @@ export function useMockEngine() {
     pushLog({
       time: hhmmss(),
       module: 'PERC',
-      message: `Engine online · capital $${allocatedCapital.toLocaleString()} · risk ${riskPerTrade.toFixed(1)}%`,
+      message: `Engine online · capital $${allocatedCapital.toLocaleString()} · risk ${riskPerTrade.toFixed(1)}% · max ${maxPositionsFor(allocatedCapital)} parallel positions`,
       type: 'SUCCESS',
     })
     pushLog({
       time: hhmmss(),
       module: 'PERC',
-      message: 'Scanning BTCUSDT 1m for SMC structure…',
+      message: `Multi-market scanner armed → ${MARKETS.map((m) => m.symbol.replace('USDT', '')).join(' · ')}`,
       type: 'INFO',
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps

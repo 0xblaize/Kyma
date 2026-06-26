@@ -35,8 +35,20 @@ const fmtUsd = (n: number, signed = false) => {
   })}`
 }
 
-const fmtPrice = (n: number) =>
-  n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+const fmtPrice = (n: number) => {
+  // Adaptive digits — DOGE/XRP price scale needs more precision than BTC.
+  if (n >= 1_000) return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  if (n >= 10) return n.toFixed(3)
+  if (n >= 1) return n.toFixed(4)
+  return n.toFixed(5)
+}
+
+const fmtQty = (n: number) => {
+  if (n >= 1_000) return n.toFixed(0)
+  if (n >= 1) return n.toFixed(3)
+  if (n >= 0.001) return n.toFixed(5)
+  return n.toFixed(8)
+}
 
 export default function PositionsLedger() {
   const {
@@ -50,7 +62,7 @@ export default function PositionsLedger() {
     openShortCount,
   } = useDashboardState()
 
-  const columns = ['Asset', 'Side', 'Size', 'Lev', 'Entry', 'SL', 'TP', 'PnL', 'Liq']
+  const columns = ['Market', 'Side', 'Qty', 'Size', 'Lev', 'Entry', 'SL', 'TP', 'PnL', 'Liq']
 
   // Spec §6.1 color rules:
   //   Win rate  · acid if > 50, rose if < 50, dim until any trades close
@@ -138,14 +150,30 @@ export default function PositionsLedger() {
               openPositions.map((p) => {
                 const sideClass = p.side === 'LONG' ? 'text-profit' : 'text-loss'
                 const pnlClass = p.pnl >= 0 ? 'text-profit' : 'text-loss'
+                const baseAsset = p.symbol.replace('USDT', '')
                 return (
                   <tr
                     key={p.tradeId}
                     className="border-b border-line/60 transition hover:bg-surface-2/60 last:border-b-0"
                   >
-                    <td className="px-2.5 py-1.5 text-[11px] text-ink">{p.symbol}</td>
+                    <td className="px-2.5 py-1.5 text-[11px] text-ink">
+                      <span className="flex items-center gap-1.5">
+                        <span>{p.symbol}</span>
+                        {p.riskTier === 'AGGRESSIVE' && (
+                          <span
+                            title="Regression-buffered: extra size, wider SL — built to survive the dip before the pump"
+                            className="rounded-sm border border-amber-500/40 bg-amber-500/10 px-1 py-[0.5px] font-mono text-[8.5px] uppercase tracking-[0.2em] text-amber-300"
+                          >
+                            agg
+                          </span>
+                        )}
+                      </span>
+                    </td>
                     <td className={`px-2.5 py-1.5 text-[10.5px] font-semibold ${sideClass}`}>
                       {p.side}
+                    </td>
+                    <td className="px-2.5 py-1.5 text-right font-mono text-[10.5px] text-ink">
+                      {fmtQty(p.qty)} <span className="text-ink-fade">{baseAsset}</span>
                     </td>
                     <td className="px-2.5 py-1.5 text-right font-mono text-[10.5px] text-ink-dim">
                       ${p.sizeUsdt.toFixed(2)}

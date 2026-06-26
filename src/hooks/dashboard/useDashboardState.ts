@@ -41,16 +41,23 @@ export interface OrderBlock {
   createdAt: number       // ms epoch — for fade/expiry
 }
 
+// Position sizing tier. BASE = standard risk%. AGGRESSIVE = bot expects a
+// drawdown before the move pumps, so it commits more notional and widens SL
+// to weather the regression instead of getting wicked out.
+export type RiskTier = 'BASE' | 'AGGRESSIVE'
+
 export interface Position {
   tradeId: string
   symbol: string
   side: 'LONG' | 'SHORT'
   sizeUsdt: number
+  qty: number             // base-asset units entered (e.g. 0.0123 BTC, 5.42 SOL)
   leverage: number
   entryPrice: number
   stopLoss: number
   takeProfit: number
   liqPrice: number
+  riskTier: RiskTier
   // Live fields updated by portfolio ticks:
   markPrice: number
   pnl: number             // unrealized USDT
