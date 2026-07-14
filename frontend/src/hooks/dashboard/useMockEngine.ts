@@ -26,6 +26,7 @@ export function useMockEngine() {
     pushOrderBlock,
     openPosition,
     setHistoricalCandles,
+    terminate,
   } = useDashboardState()
 
   const wsRef = useRef<WebSocket | null>(null)
@@ -75,6 +76,14 @@ export function useMockEngine() {
           // Agent intelligence events (flow when lifecycle === 'active')
           case 'agent_log':
             pushLog(data)
+            break
+
+          case 'portfolio_update':
+            break
+
+          case 'profit_target_hit':
+            // Backend confirmed profit target reached — auto-terminate
+            terminate()
             break
 
           case 'smc_pattern_detected':

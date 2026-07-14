@@ -90,6 +90,7 @@ interface DashboardState {
   allocatedCapital: number     // amount in selectedAsset units (ETH or USDC)
   riskPerTrade: number          // percent, 0.1..5.0
   maxDrawdownPct: number        // percent, kill-switch threshold
+  profitTarget: number          // USDT — agent auto-stops when realizedPnl hits this
   // Market & AI state (fed by useMockEngine — Vol.2 §1.1)
   currentPrice: number
   terminalLogs: TerminalLog[]
@@ -113,6 +114,7 @@ type Action =
   | { type: 'SET_CAPITAL'; value: number }
   | { type: 'SET_RISK'; value: number }
   | { type: 'SET_DRAWDOWN'; value: number }
+  | { type: 'SET_PROFIT_TARGET'; value: number }
   | { type: 'SET_ASSET'; value: SelectedAsset }
   | { type: 'SET_MARKET'; value: string }
   | { type: 'SET_TIMEFRAME'; value: string }
@@ -142,6 +144,7 @@ const initial: DashboardState = {
   allocatedCapital: 0,
   riskPerTrade: 1.0,
   maxDrawdownPct: 10,
+  profitTarget: 0,
   currentPrice: 0,
   terminalLogs: [],
   activeOrderBlocks: [],
@@ -174,6 +177,8 @@ function reducer(state: DashboardState, action: Action): DashboardState {
       return { ...state, riskPerTrade: clamp(action.value, 0.1, 5.0) }
     case 'SET_DRAWDOWN':
       return { ...state, maxDrawdownPct: clamp(action.value, 1, 100) }
+    case 'SET_PROFIT_TARGET':
+      return { ...state, profitTarget: Math.max(0, action.value) }
     case 'SET_ASSET':
       // Switching asset resets allocated capital — units differ (1.0 ETH ≠ 1.0 USDC).
       // Locked once a session is live so we don't desync UI from the on-chain vault.
@@ -297,6 +302,7 @@ interface DashboardContextValue extends DashboardState {
   setAllocatedCapital: (v: number) => void
   setRiskPerTrade: (v: number) => void
   setMaxDrawdownPct: (v: number) => void
+  setProfitTarget: (v: number) => void
   setSelectedAsset: (v: SelectedAsset) => void
   setSelectedMarket: (v: string) => void
   setSelectedTimeframe: (v: string) => void
@@ -326,6 +332,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const setAllocatedCapital = useCallback((value: number) => dispatch({ type: 'SET_CAPITAL', value }), [])
   const setRiskPerTrade = useCallback((value: number) => dispatch({ type: 'SET_RISK', value }), [])
   const setMaxDrawdownPct = useCallback((value: number) => dispatch({ type: 'SET_DRAWDOWN', value }), [])
+  const setProfitTarget = useCallback((value: number) => dispatch({ type: 'SET_PROFIT_TARGET', value }), [])
   const setSelectedAsset = useCallback((value: SelectedAsset) => dispatch({ type: 'SET_ASSET', value }), [])
   const setSelectedMarket = useCallback((value: string) => dispatch({ type: 'SET_MARKET', value }), [])
   const setSelectedTimeframe = useCallback((value: string) => dispatch({ type: 'SET_TIMEFRAME', value }), [])
@@ -377,6 +384,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         setAllocatedCapital,
         setRiskPerTrade,
         setMaxDrawdownPct,
+        setProfitTarget,
         setSelectedAsset,
         setSelectedMarket,
         setSelectedTimeframe,
@@ -400,6 +408,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       setAllocatedCapital,
       setRiskPerTrade,
       setMaxDrawdownPct,
+      setProfitTarget,
       setSelectedAsset,
       setSelectedMarket,
       setSelectedTimeframe,

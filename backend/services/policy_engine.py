@@ -21,19 +21,20 @@ def _ts() -> str:
 
 class PolicyEngine:
     def __init__(self):
-        # These are overridden per session from the frontend config
-        self.max_drawdown_pct  = float(os.getenv("MAX_DRAWDOWN_PCT", "10.0"))
-        self.max_lot_size_usdt = float(os.getenv("MAX_LOT_SIZE_USDT", "1000.0"))
-        self.risk_per_trade    = float(os.getenv("RISK_PER_TRADE_PCT", "1.0"))
-        self.current_drawdown  = 0.0
-        self.open_positions: dict = {}
+        self.max_drawdown_pct   = float(os.getenv("MAX_DRAWDOWN_PCT", "10.0"))
+        self.max_lot_size_usdt  = float(os.getenv("MAX_LOT_SIZE_USDT", "500.0"))
+        self.risk_per_trade     = float(os.getenv("RISK_PER_TRADE_PCT", "1.0"))
+        self.current_drawdown   = 0.0
+        self.profit_target      = 0.0        # 0 = disabled
+        self.total_realized_pnl = 0.0        # running total across all closed trades
 
-    def configure(self, allocated_capital: float, risk_pct: float, max_dd_pct: float):
+    def configure(self, allocated_capital: float, risk_pct: float, max_dd_pct: float, profit_target: float = 0.0):
         """Called when the agent is deployed with the user's sidebar config."""
-        self.allocated_capital = allocated_capital
-        self.risk_per_trade    = risk_pct
-        self.max_drawdown_pct  = max_dd_pct
-        self.max_lot_size_usdt = allocated_capital * (risk_pct / 100) * 20
+        self.allocated_capital  = allocated_capital
+        self.risk_per_trade     = risk_pct
+        self.max_drawdown_pct   = max_dd_pct
+        self.profit_target      = profit_target
+        self.max_lot_size_usdt  = allocated_capital * (risk_pct / 100) * 20
 
     async def evaluate_and_execute(
         self,
@@ -51,6 +52,19 @@ class PolicyEngine:
                 "event": "agent_log",
                 "data": {"timestamp": _ts(), "module": module, "message": msg, "type": log_type}
             }))
+
+        # ── Check 0: Profit target reached → auto-stop ───────────────────────
+        if self.profit_target > 0 and self.total_realized_pnl >= self.profit_target:
+            await log("RISK",
+                f"🎯 PROFIT TARGET HIT: ${self.total_realized_pnl:.2f} ≥ ${self.profit_target:.2f} — auto-terminating agent",
+                "SUCCESS"
+            )
+            from api.websockets import manager as ws_manager
+            await ws_manager.broadcast(json.dumps({"event": "profit_target_hit", "data": {
+                "realized": self.total_realized_pnl,
+                "target": self.profit_target,
+            }}))
+            return
 
         # ── Check 1: Drawdown limit ───────────────────────────────────────────
         if self.current_drawdown >= self.max_drawdown_pct:

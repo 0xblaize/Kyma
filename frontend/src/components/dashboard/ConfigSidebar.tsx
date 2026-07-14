@@ -21,12 +21,15 @@ export default function ConfigSidebar() {
     allocatedCapital,
     riskPerTrade,
     maxDrawdownPct,
+    profitTarget,
+    realizedPnl,
     selectedAsset,
     lifecycle,
     txPhase,
     setAllocatedCapital,
     setRiskPerTrade,
     setMaxDrawdownPct,
+    setProfitTarget,
     setSelectedAsset,
   } = useDashboardState()
   const { byAsset } = useWalletAssets()
@@ -37,6 +40,7 @@ export default function ConfigSidebar() {
   const capitalId = useId()
   const riskId = useId()
   const ddId = useId()
+  const ptId = useId()
 
   const balance = byAsset(selectedAsset)
   const balanceFloat = Number(formatUnits(balance.raw, balance.decimals))
@@ -196,6 +200,52 @@ export default function ConfigSidebar() {
             %
           </span>
         </div>
+      </div>
+
+      {/* Profit Target ── agent auto-terminates when realizedPnl hits this */}
+      <div className="flex flex-col gap-2">
+        <div className="flex items-baseline justify-between">
+          <label htmlFor={ptId} className="text-[11px] text-ink-dim">
+            Profit Target <span className="text-ink-mute">(auto-stop)</span>
+          </label>
+          {profitTarget > 0 && (
+            <span className={`font-mono text-[10px] ${
+              realizedPnl >= profitTarget ? 'text-profit font-bold' : 'text-ink-fade'
+            }`}>
+              ${realizedPnl.toFixed(2)} / ${profitTarget.toFixed(0)}
+            </span>
+          )}
+        </div>
+        <div className="relative">
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 font-mono text-[11px] text-ink-mute">
+            $
+          </span>
+          <input
+            id={ptId}
+            type="number"
+            min={0}
+            step={10}
+            placeholder="0 = disabled"
+            disabled={isLive}
+            value={profitTarget === 0 ? '' : profitTarget}
+            onChange={(e) => setProfitTarget(Number(e.target.value))}
+            className="h-9 w-full rounded-md border border-line bg-surface-0 pl-7 pr-3 font-mono text-[12.5px] text-profit outline-none transition focus:border-profit focus:ring-1 focus:ring-profit disabled:cursor-not-allowed disabled:opacity-60"
+          />
+        </div>
+        {/* Live progress bar — fills green as profit approaches target */}
+        {isLive && profitTarget > 0 && (
+          <div className="h-1 w-full rounded-full bg-line overflow-hidden">
+            <div
+              className="h-full rounded-full bg-profit transition-all duration-500"
+              style={{ width: `${Math.min(100, Math.max(0, (realizedPnl / profitTarget) * 100))}%` }}
+            />
+          </div>
+        )}
+        {profitTarget > 0 && (
+          <span className="font-mono text-[9.5px] text-ink-fade">
+            Agent auto-terminates when target is hit.
+          </span>
+        )}
       </div>
 
       <div className="flex-1" />
