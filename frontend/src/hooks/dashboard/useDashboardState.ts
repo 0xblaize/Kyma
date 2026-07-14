@@ -80,6 +80,8 @@ interface DashboardState {
   selectedAsset: SelectedAsset
   // Top 10 Crypto market chosen.
   selectedMarket: string
+  // Chart timeframe: 1m 3m 5m 15m 30m 1h 2h 4h 6h 12h 1d
+  selectedTimeframe: string
   // On-chain tx tracking (drives button labels / disabled state).
   txPhase: TxPhase
   txHash: string | null
@@ -103,6 +105,8 @@ interface DashboardState {
   // Counters consumed by mock generators / terminal to re-seed or clear
   resetNonce: number
   flushNonce: number
+  // Real OHLCV candles from backend (populated on subscribe_market response)
+  historicalCandles: { time: number; open: number; high: number; low: number; close: number }[]
 }
 
 type Action =
@@ -111,6 +115,7 @@ type Action =
   | { type: 'SET_DRAWDOWN'; value: number }
   | { type: 'SET_ASSET'; value: SelectedAsset }
   | { type: 'SET_MARKET'; value: string }
+  | { type: 'SET_TIMEFRAME'; value: string }
   | { type: 'TX_PHASE'; phase: TxPhase; hash?: string | null; error?: string | null }
   | { type: 'DEPLOY' }
   | { type: 'TOGGLE_PAUSED' }
@@ -124,11 +129,13 @@ type Action =
   | { type: 'OPEN_POSITION'; position: Position }
   | { type: 'CLOSE_POSITION'; tradeId: string; realized: number; wasWin: boolean }
   | { type: 'UPDATE_POSITIONS'; positions: Position[]; unrealized: number }
+  | { type: 'SET_HISTORICAL'; candles: { time: number; open: number; high: number; low: number; close: number }[] }
 
 const initial: DashboardState = {
   lifecycle: 'idle',
   selectedAsset: 'USDC',
   selectedMarket: 'BTCUSDT',
+  selectedTimeframe: '1h',
   txPhase: 'idle',
   txHash: null,
   txError: null,
@@ -148,6 +155,7 @@ const initial: DashboardState = {
   maxDrawdown: 0,
   resetNonce: 0,
   flushNonce: 0,
+  historicalCandles: [],
 }
 
 // Monotonic counters live outside React state so they survive even when we
@@ -172,8 +180,9 @@ function reducer(state: DashboardState, action: Action): DashboardState {
       if (state.lifecycle !== 'idle') return state
       return { ...state, selectedAsset: action.value, allocatedCapital: 0 }
     case 'SET_MARKET':
-      if (state.lifecycle !== 'idle') return state
-      return { ...state, selectedMarket: action.value }
+      return { ...state, selectedMarket: action.value, currentPrice: 0 }
+    case 'SET_TIMEFRAME':
+      return { ...state, selectedTimeframe: action.value, currentPrice: 0 }
     case 'TX_PHASE':
       return {
         ...state,
@@ -264,6 +273,8 @@ function reducer(state: DashboardState, action: Action): DashboardState {
         openPositions: action.positions,
         unrealizedPnl: action.unrealized,
       }
+    case 'SET_HISTORICAL':
+      return { ...state, historicalCandles: action.candles }
     default:
       return state
   }
@@ -288,6 +299,7 @@ interface DashboardContextValue extends DashboardState {
   setMaxDrawdownPct: (v: number) => void
   setSelectedAsset: (v: SelectedAsset) => void
   setSelectedMarket: (v: string) => void
+  setSelectedTimeframe: (v: string) => void
   // Tx tracking
   setTxPhase: (phase: TxPhase, hash?: string | null, error?: string | null) => void
   // Lifecycle actions
@@ -303,6 +315,7 @@ interface DashboardContextValue extends DashboardState {
   openPosition: (p: Position) => void
   closePosition: (tradeId: string, realized: number, wasWin: boolean) => void
   updatePositions: (positions: Position[], unrealized: number) => void
+  setHistoricalCandles: (candles: { time: number; open: number; high: number; low: number; close: number }[]) => void
 }
 
 const Ctx = createContext<DashboardContextValue | null>(null)
@@ -315,6 +328,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const setMaxDrawdownPct = useCallback((value: number) => dispatch({ type: 'SET_DRAWDOWN', value }), [])
   const setSelectedAsset = useCallback((value: SelectedAsset) => dispatch({ type: 'SET_ASSET', value }), [])
   const setSelectedMarket = useCallback((value: string) => dispatch({ type: 'SET_MARKET', value }), [])
+  const setSelectedTimeframe = useCallback((value: string) => dispatch({ type: 'SET_TIMEFRAME', value }), [])
   const setTxPhase = useCallback(
     (phase: TxPhase, hash?: string | null, error?: string | null) =>
       dispatch({ type: 'TX_PHASE', phase, hash, error }),
@@ -343,6 +357,11 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       dispatch({ type: 'UPDATE_POSITIONS', positions, unrealized }),
     [],
   )
+  const setHistoricalCandles = useCallback(
+    (candles: { time: number; open: number; high: number; low: number; close: number }[]) =>
+      dispatch({ type: 'SET_HISTORICAL', candles }),
+    [],
+  )
 
   const value = useMemo<DashboardContextValue>(
     () => {
@@ -360,6 +379,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         setMaxDrawdownPct,
         setSelectedAsset,
         setSelectedMarket,
+        setSelectedTimeframe,
         setTxPhase,
         deployAgent,
         togglePaused,
@@ -372,6 +392,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         openPosition,
         closePosition,
         updatePositions,
+        setHistoricalCandles,
       }
     },
     [
@@ -381,6 +402,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       setMaxDrawdownPct,
       setSelectedAsset,
       setSelectedMarket,
+      setSelectedTimeframe,
       setTxPhase,
       deployAgent,
       togglePaused,
@@ -393,6 +415,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       openPosition,
       closePosition,
       updatePositions,
+      setHistoricalCandles,
     ],
   )
 

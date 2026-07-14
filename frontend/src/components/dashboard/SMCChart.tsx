@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   CandlestickSeries,
   ColorType,
@@ -15,34 +15,24 @@ import {
 } from 'lightweight-charts'
 import { useDashboardState } from '@/hooks/dashboard/useDashboardState'
 
-// Spec §5.2: SMC Smart Chart. lightweight-charts, transparent layout so the
-// panel background shows through, textColor zinc-500, horizontal gridlines
-// zinc-800. Candles emerald-500 / rose-500. Order blocks draw as dotted
-// yellow price lines via createPriceLine (Vol.2 §3.2 "crucial UI trick").
+// ─────────────────────────────────────────────────────────────────────────────
+// SMCChart — always-live TradingView-style candlestick chart.
+//
+// Historical candles are fetched from the real exchange (via FastAPI + CCXT)
+// whenever the user changes the market or timeframe. The current candle is
+// kept live via WebSocket ticks from the backend's market_router.
+// ─────────────────────────────────────────────────────────────────────────────
 
-const CANDLE_SECONDS = 5    // 5-second candles so live action is visible
-const HISTORY_BARS = 80
-const START_PRICE = 64_500
-
-function nowBucket(): UTCTimestamp {
-  return (Math.floor(Date.now() / 1000 / CANDLE_SECONDS) * CANDLE_SECONDS) as UTCTimestamp
+// Timeframe → seconds per candle, used to bucket incoming ticks.
+const TF_SECONDS: Record<string, number> = {
+  '1m': 60, '3m': 180, '5m': 300, '15m': 900, '30m': 1800,
+  '1h': 3600, '2h': 7200, '4h': 14400, '6h': 21600, '12h': 43200, '1d': 86400,
 }
 
-// Pure synth — used once on mount to seed a believable history before the
-// engine starts emitting live ticks. Random walk + tight body/wick spread.
-function seedHistory(now: UTCTimestamp): CandlestickData[] {
-  const out: CandlestickData[] = []
-  let price = START_PRICE
-  for (let i = HISTORY_BARS; i > 0; i--) {
-    const t = (now - i * CANDLE_SECONDS) as UTCTimestamp
-    const open = price
-    const close = price + (Math.random() - 0.5) * 80
-    const high = Math.max(open, close) + Math.random() * 30
-    const low = Math.min(open, close) - Math.random() * 30
-    out.push({ time: t, open, high, low, close })
-    price = close
-  }
-  return out
+const TIMEFRAMES = ['1m', '5m', '15m', '30m', '1h', '2h', '4h', '1d']
+
+function nowBucket(tfSeconds: number): UTCTimestamp {
+  return (Math.floor(Date.now() / 1000 / tfSeconds) * tfSeconds) as UTCTimestamp
 }
 
 export default function SMCChart() {
@@ -52,12 +42,23 @@ export default function SMCChart() {
   const lastCandleRef = useRef<CandlestickData | null>(null)
   const priceLinesRef = useRef<Map<number, IPriceLine>>(new Map())
 
-  const { currentPrice, activeOrderBlocks, resetNonce, active, selectedMarket } = useDashboardState()
+  const {
+    currentPrice,
+    activeOrderBlocks,
+    selectedMarket,
+    selectedTimeframe,
+    setSelectedMarket,
+    setSelectedTimeframe,
+    historicalCandles,
+  } = useDashboardState()
 
-  // One-time chart construction.
+  const [isLoading, setIsLoading] = useState(true)
+
+  // ── Chart construction — runs once ────────────────────────────────────────
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
+
     const chart = createChart(el, {
       width: el.clientWidth,
       height: el.clientHeight,
@@ -72,9 +73,10 @@ export default function SMCChart() {
         horzLines: { color: '#27272a' },
       },
       rightPriceScale: { borderColor: '#27272a' },
-      timeScale: { borderColor: '#27272a', timeVisible: true, secondsVisible: true },
+      timeScale: { borderColor: '#27272a', timeVisible: true, secondsVisible: false },
       crosshair: { mode: CrosshairMode.Normal },
     })
+
     const series = chart.addSeries(CandlestickSeries, {
       upColor: '#10b981',
       downColor: '#f43f5e',
@@ -82,11 +84,11 @@ export default function SMCChart() {
       wickDownColor: '#f43f5e',
       borderVisible: false,
     })
+
     chartRef.current = chart
     seriesRef.current = series
 
     const ro = new ResizeObserver(() => {
-      if (!el) return
       chart.applyOptions({ width: el.clientWidth, height: el.clientHeight })
     })
     ro.observe(el)
@@ -100,32 +102,43 @@ export default function SMCChart() {
     }
   }, [])
 
-  // Seed / re-seed history. Runs on mount and on every reset so the chart
-  // starts clean after a "Reset Simulation" press.
+  // ── Load real historical candles from the backend ─────────────────────────
+  // Triggers whenever the state store receives a historical_candles event
+  // (i.e. whenever market or timeframe changes via subscribe_market).
   useEffect(() => {
     const series = seriesRef.current
     const chart = chartRef.current
-    if (!series || !chart) return
-    // Clear any existing order-block lines first — they belong to the prior
-    // session and would point at stale prices.
+    if (!series || !chart || historicalCandles.length === 0) return
+
+    // Clear order-block price lines — they're stale on market change.
     for (const line of priceLinesRef.current.values()) series.removePriceLine(line)
     priceLinesRef.current.clear()
 
-    const data = seedHistory(nowBucket())
+    const data: CandlestickData[] = historicalCandles.map((c) => ({
+      time: c.time as UTCTimestamp,
+      open: c.open,
+      high: c.high,
+      low: c.low,
+      close: c.close,
+    }))
+
     series.setData(data)
     lastCandleRef.current = data[data.length - 1] ?? null
     chart.timeScale().fitContent()
-  }, [resetNonce])
+    setIsLoading(false)
+  }, [historicalCandles])
 
-  // Live tick handling. Each market_tick from the store either extends the
-  // current candle (update high/low/close) or rolls over into a new one.
+  // ── Live tick — update the current candle in real-time ────────────────────
   useEffect(() => {
     const series = seriesRef.current
     if (!series || currentPrice <= 0) return
-    const bucket = nowBucket()
+
+    const tfSeconds = TF_SECONDS[selectedTimeframe] ?? 3600
+    const bucket = nowBucket(tfSeconds)
     const last = lastCandleRef.current
+
     if (!last || last.time !== bucket) {
-      // New candle — open at the prior close (or current price on first tick).
+      // New candle: open at the prior close
       const open = last ? last.close : currentPrice
       const next: CandlestickData = {
         time: bucket,
@@ -147,23 +160,19 @@ export default function SMCChart() {
       series.update(next)
       lastCandleRef.current = next
     }
-  }, [currentPrice])
+  }, [currentPrice, selectedTimeframe])
 
-  // Order-block overlays — one yellow dotted price line per OB. We diff
-  // against the ref-held Map to add new ones and drop any that the store
-  // dropped (the store caps OB count to keep the chart legible).
+  // ── Order-block overlays ───────────────────────────────────────────────────
   useEffect(() => {
     const series = seriesRef.current
     if (!series) return
     const liveIds = new Set(activeOrderBlocks.map((o) => o.id))
-    // Remove lines that no longer have a backing OB.
     for (const [id, line] of priceLinesRef.current) {
       if (!liveIds.has(id)) {
         series.removePriceLine(line)
         priceLinesRef.current.delete(id)
       }
     }
-    // Add lines for new OBs.
     for (const ob of activeOrderBlocks) {
       if (priceLinesRef.current.has(ob.id)) continue
       const line = series.createPriceLine({
@@ -178,29 +187,74 @@ export default function SMCChart() {
     }
   }, [activeOrderBlocks])
 
-  const showOverlay = !active && currentPrice === 0
+  // Reset loading indicator when market/timeframe changes
+  useEffect(() => {
+    setIsLoading(true)
+  }, [selectedMarket, selectedTimeframe])
+
+  // Format the market label nicely: BTCUSDT → BTC/USDT
+  const marketLabel = selectedMarket.includes('USDT')
+    ? selectedMarket.replace('USDT', '/USDT')
+    : selectedMarket
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-surface-1">
-      <div className="flex h-8 items-center justify-between border-b border-line px-4">
-        <div className="flex items-center gap-2.5">
-          <span className="text-[11px] font-semibold tracking-tight text-ink">SMC Chart</span>
-          <span className="rounded-sm border border-line bg-surface-2 px-1.5 py-[1px] font-mono text-[9px] tracking-[0.18em] text-ink-dim">
-            1m
+      {/* ── Chart Header ──────────────────────────────────────────────── */}
+      <div className="flex h-10 shrink-0 items-center justify-between border-b border-line px-3 gap-2">
+        {/* Left: market selector */}
+        <div className="flex items-center gap-2">
+          <select
+            value={selectedMarket}
+            onChange={(e) => setSelectedMarket(e.target.value)}
+            className="h-7 rounded border border-line bg-surface-0 px-2 font-mono text-[10px] text-ink outline-none transition focus:border-acid cursor-pointer"
+          >
+            {['BTCUSDT','ETHUSDT','SOLUSDT','BNBUSDT','XRPUSDT','ADAUSDT','AVAXUSDT','DOGEUSDT','LINKUSDT','DOTUSDT'].map((m) => (
+              <option key={m} value={m}>{m.replace('USDT', '/USDT')}</option>
+            ))}
+          </select>
+
+          {/* Timeframe pills */}
+          <div className="flex items-center gap-1">
+            {TIMEFRAMES.map((tf) => (
+              <button
+                key={tf}
+                onClick={() => setSelectedTimeframe(tf)}
+                className={`h-6 rounded px-1.5 font-mono text-[9px] uppercase tracking-wide transition ${
+                  selectedTimeframe === tf
+                    ? 'bg-acid text-black font-bold'
+                    : 'text-ink-dim hover:text-ink hover:bg-surface-2'
+                }`}
+              >
+                {tf}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Right: live price */}
+        <div className="flex items-center gap-2 shrink-0">
+          {currentPrice > 0 && (
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="absolute inset-0 rounded-full bg-profit/60 animate-ping" />
+              <span className="relative h-1.5 w-1.5 rounded-full bg-profit" />
+            </span>
+          )}
+          <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-fade">
+            {currentPrice > 0
+              ? `${marketLabel} · $${currentPrice.toFixed(currentPrice < 1 ? 5 : 2)}`
+              : `${marketLabel} · loading…`}
           </span>
         </div>
-        <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-fade">
-          {currentPrice > 0
-            ? `${selectedMarket} · $${currentPrice.toFixed(2)}`
-            : 'awaiting candle feed'}
-        </span>
       </div>
+
+      {/* ── Chart Canvas ──────────────────────────────────────────────── */}
       <div className="relative flex-1 min-h-0">
         <div ref={containerRef} className="absolute inset-0" />
-        {showOverlay && (
+
+        {isLoading && (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-            <span className="rounded-md border border-line bg-surface-1/80 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.28em] text-ink-fade backdrop-blur">
-              deploy agent to begin streaming
+            <span className="rounded-md border border-line bg-surface-1/80 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.28em] text-ink-fade backdrop-blur">
+              fetching {marketLabel} {selectedTimeframe} candles…
             </span>
           </div>
         )}

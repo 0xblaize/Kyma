@@ -22,14 +22,12 @@ export default function ConfigSidebar() {
     riskPerTrade,
     maxDrawdownPct,
     selectedAsset,
-    selectedMarket,
     lifecycle,
     txPhase,
     setAllocatedCapital,
     setRiskPerTrade,
     setMaxDrawdownPct,
     setSelectedAsset,
-    setSelectedMarket,
   } = useDashboardState()
   const { byAsset } = useWalletAssets()
   const { deploy } = useVaultActions()
@@ -70,26 +68,9 @@ export default function ConfigSidebar() {
         </span>
       </div>
 
-      {/* Market Selector */}
-      <div className="flex flex-col gap-2">
-        <span className="text-[11px] text-ink-dim">Market Selector</span>
-        <select
-          disabled={isLive}
-          value={selectedMarket}
-          onChange={(e) => setSelectedMarket(e.target.value)}
-          className="h-8 rounded-md border border-line bg-surface-0 px-2 text-[10.5px] outline-none transition focus:border-acid focus:ring-1 focus:ring-acid disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          <option value="BTCUSDT">BTC/USDT</option>
-          <option value="ETHUSDT">ETH/USDT</option>
-          <option value="SOLUSDT">SOL/USDT</option>
-          <option value="BNBUSDT">BNB/USDT</option>
-          <option value="XRPUSDT">XRP/USDT</option>
-          <option value="ADAUSDT">ADA/USDT</option>
-          <option value="AVAXUSDT">AVAX/USDT</option>
-          <option value="DOGEUSDT">DOGE/USDT</option>
-          <option value="LINKUSDT">LINK/USDT</option>
-          <option value="DOTUSDT">DOT/USDT</option>
-        </select>
+      {/* Market + Timeframe — now live in the chart header above the canvas */}
+      <div className="rounded-md border border-line bg-surface-0/60 px-3 py-2 text-[10px] text-ink-fade font-mono tracking-wide">
+        Market &amp; timeframe are selectable directly on the chart ↑
       </div>
 
       {/* Asset toggle — drives MAX, units, and which vault path runs */}
