@@ -1,9 +1,5 @@
 {
-<<<<<<< HEAD
   "name": "kyma-terminal",
-=======
-  "name": "agentOS-3d",
->>>>>>> 329e9be2135d833cd4216995a8008f2985cca82d
   "version": "0.1.0",
   "private": true,
   "scripts": {
