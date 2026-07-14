@@ -72,6 +72,26 @@ npm run dev
 
 ---
 
+## 🌍 Deployment Guide (Vercel + Railway)
+
+The repository is fully split to allow seamless deployments of the frontend to Vercel and the backend to Railway.
+
+### Frontend Deployment (Vercel)
+1. Push the repository to GitHub and import it into Vercel.
+2. In the **Vercel Project Settings > General**, change the **Root Directory** to `frontend`.
+3. Under **Environment Variables**, add:
+   - `NEXT_PUBLIC_WS_URL`: Set this to your Railway WebSocket URL (e.g., `wss://kyma-backend.up.railway.app/ws`).
+4. Click Deploy. Vercel will automatically build the Next.js app inside the `frontend` folder while entirely ignoring the Python backend.
+
+### Backend Deployment (Railway)
+1. In your Railway dashboard, create a new project and select **Deploy from GitHub repo**.
+2. Select this repository.
+3. Railway will automatically detect the Python environment. Go to **Settings > Service > Root Directory** and change it to `/backend`.
+4. The `Procfile` is already included to spin up the FastAPI server and dynamically bind to Railway's `$PORT`.
+5. Once deployed, grab the public domain (e.g., `kyma-backend.up.railway.app`) and prefix it with `wss://` to plug into your Vercel environment variables.
+
+---
+
 ## 🛠 Technology Stack
 
 | Layer        | Technology                                               |
