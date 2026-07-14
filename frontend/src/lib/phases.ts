@@ -1,19 +1,11 @@
 // ────────────────────────────────────────────────────────────────────────────
-<<<<<<< HEAD
 // The 6 phases of the Kyma landing experience.
-=======
-// The 6 phases of the Agent.OS landing experience.
->>>>>>> 329e9be2135d833cd4216995a8008f2985cca82d
 // Each phase = roughly one viewport-height of scroll. Your 3D layer reads the
 // `phase` index + `phaseProgress` (0→1 within that phase) to drive the model.
 // ────────────────────────────────────────────────────────────────────────────
 
 export const PHASES = [
-<<<<<<< HEAD
   { id: 'intro', label: 'Kyma' }, //   0 — big name + zigzag box flying around
-=======
-  { id: 'intro', label: 'Agent.OS' }, //   0 — big name + zigzag box flying around
->>>>>>> 329e9be2135d833cd4216995a8008f2985cca82d
   { id: 'morph', label: 'Morph' }, //      1 — box snaps to center, becomes mannequin
   { id: 'data', label: 'Desktop' }, //     2 — mannequin turns, massive desktop / charts
   { id: 'shadows', label: 'Shadows' }, //  3 — sits at desk, obscured / dark

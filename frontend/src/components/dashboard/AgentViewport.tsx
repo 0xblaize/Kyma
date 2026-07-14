@@ -53,11 +53,7 @@ export default function AgentViewport() {
 
       {/* Spec §3.1 header */}
       <div className="pointer-events-none absolute right-5 top-5 rounded-md border border-line bg-surface-1/70 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.22em] text-ink-mute backdrop-blur">
-<<<<<<< HEAD
         kyma · viewport
-=======
-        agent.os · viewport
->>>>>>> 329e9be2135d833cd4216995a8008f2985cca82d
       </div>
 
       <AnimatePresence>

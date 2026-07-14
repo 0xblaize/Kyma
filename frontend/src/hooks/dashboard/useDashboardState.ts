@@ -78,11 +78,8 @@ interface DashboardState {
   lifecycle: AgentLifecycle
   // Asset chosen for allocated capital (drives MAX + decimals).
   selectedAsset: SelectedAsset
-<<<<<<< HEAD
   // Top 10 Crypto market chosen.
   selectedMarket: string
-=======
->>>>>>> 329e9be2135d833cd4216995a8008f2985cca82d
   // On-chain tx tracking (drives button labels / disabled state).
   txPhase: TxPhase
   txHash: string | null
@@ -113,10 +110,7 @@ type Action =
   | { type: 'SET_RISK'; value: number }
   | { type: 'SET_DRAWDOWN'; value: number }
   | { type: 'SET_ASSET'; value: SelectedAsset }
-<<<<<<< HEAD
   | { type: 'SET_MARKET'; value: string }
-=======
->>>>>>> 329e9be2135d833cd4216995a8008f2985cca82d
   | { type: 'TX_PHASE'; phase: TxPhase; hash?: string | null; error?: string | null }
   | { type: 'DEPLOY' }
   | { type: 'TOGGLE_PAUSED' }
@@ -134,10 +128,7 @@ type Action =
 const initial: DashboardState = {
   lifecycle: 'idle',
   selectedAsset: 'USDC',
-<<<<<<< HEAD
   selectedMarket: 'BTCUSDT',
-=======
->>>>>>> 329e9be2135d833cd4216995a8008f2985cca82d
   txPhase: 'idle',
   txHash: null,
   txError: null,
@@ -180,12 +171,9 @@ function reducer(state: DashboardState, action: Action): DashboardState {
       // Locked once a session is live so we don't desync UI from the on-chain vault.
       if (state.lifecycle !== 'idle') return state
       return { ...state, selectedAsset: action.value, allocatedCapital: 0 }
-<<<<<<< HEAD
     case 'SET_MARKET':
       if (state.lifecycle !== 'idle') return state
       return { ...state, selectedMarket: action.value }
-=======
->>>>>>> 329e9be2135d833cd4216995a8008f2985cca82d
     case 'TX_PHASE':
       return {
         ...state,
@@ -299,10 +287,7 @@ interface DashboardContextValue extends DashboardState {
   setRiskPerTrade: (v: number) => void
   setMaxDrawdownPct: (v: number) => void
   setSelectedAsset: (v: SelectedAsset) => void
-<<<<<<< HEAD
   setSelectedMarket: (v: string) => void
-=======
->>>>>>> 329e9be2135d833cd4216995a8008f2985cca82d
   // Tx tracking
   setTxPhase: (phase: TxPhase, hash?: string | null, error?: string | null) => void
   // Lifecycle actions
@@ -329,10 +314,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const setRiskPerTrade = useCallback((value: number) => dispatch({ type: 'SET_RISK', value }), [])
   const setMaxDrawdownPct = useCallback((value: number) => dispatch({ type: 'SET_DRAWDOWN', value }), [])
   const setSelectedAsset = useCallback((value: SelectedAsset) => dispatch({ type: 'SET_ASSET', value }), [])
-<<<<<<< HEAD
   const setSelectedMarket = useCallback((value: string) => dispatch({ type: 'SET_MARKET', value }), [])
-=======
->>>>>>> 329e9be2135d833cd4216995a8008f2985cca82d
   const setTxPhase = useCallback(
     (phase: TxPhase, hash?: string | null, error?: string | null) =>
       dispatch({ type: 'TX_PHASE', phase, hash, error }),
@@ -377,10 +359,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         setRiskPerTrade,
         setMaxDrawdownPct,
         setSelectedAsset,
-<<<<<<< HEAD
         setSelectedMarket,
-=======
->>>>>>> 329e9be2135d833cd4216995a8008f2985cca82d
         setTxPhase,
         deployAgent,
         togglePaused,
@@ -401,10 +380,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       setRiskPerTrade,
       setMaxDrawdownPct,
       setSelectedAsset,
-<<<<<<< HEAD
       setSelectedMarket,
-=======
->>>>>>> 329e9be2135d833cd4216995a8008f2985cca82d
       setTxPhase,
       deployAgent,
       togglePaused,

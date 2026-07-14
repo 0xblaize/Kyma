@@ -2,11 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-<<<<<<< HEAD
   title: 'Kyma — Autonomous Trading Intelligence',
-=======
-  title: 'Agent.OS — Autonomous Trading Intelligence',
->>>>>>> 329e9be2135d833cd4216995a8008f2985cca82d
   description: 'Perception → Decision → Execution → Risk → Exit',
 }
 

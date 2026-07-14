@@ -18,17 +18,10 @@ const connectors = [
           projectId: WC_PROJECT_ID,
           showQrModal: true,
           metadata: {
-<<<<<<< HEAD
             name: 'Kyma',
             description: 'Autonomous trading intelligence',
             url: typeof window !== 'undefined' ? window.location.origin : 'https://kyma.terminal',
             icons: ['https://avatars.githubusercontent.com/u/37784886'],
-=======
-            name: 'Agent.OS',
-            description: 'Autonomous trading intelligence',
-            url: typeof window !== 'undefined' ? window.location.origin : 'https://agent.os',
-            icons: [],
->>>>>>> 329e9be2135d833cd4216995a8008f2985cca82d
           },
         }),
       ]

@@ -381,11 +381,7 @@ function ConnectorPicker({ connectors, isPending, error, onPick, onClose }: Pick
         )}
         <div className="border-t border-line/60 bg-surface-0/60 px-5 py-3">
           <p className="text-[10px] tracking-wide text-ink-mute">
-<<<<<<< HEAD
             By connecting, you agree to Kyma&rsquo;s simulated paper-trading terms. No real
-=======
-            By connecting, you agree to Agent.OS&rsquo;s simulated paper-trading terms. No real
->>>>>>> 329e9be2135d833cd4216995a8008f2985cca82d
             funds are moved on Sepolia.
           </p>
         </div>
