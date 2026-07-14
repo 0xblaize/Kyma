@@ -22,14 +22,20 @@ export default function ConfigSidebar() {
     riskPerTrade,
     maxDrawdownPct,
     selectedAsset,
+<<<<<<< HEAD
     selectedMarket,
+=======
+>>>>>>> 329e9be2135d833cd4216995a8008f2985cca82d
     lifecycle,
     txPhase,
     setAllocatedCapital,
     setRiskPerTrade,
     setMaxDrawdownPct,
     setSelectedAsset,
+<<<<<<< HEAD
     setSelectedMarket,
+=======
+>>>>>>> 329e9be2135d833cd4216995a8008f2985cca82d
   } = useDashboardState()
   const { byAsset } = useWalletAssets()
   const { deploy } = useVaultActions()
@@ -70,6 +76,7 @@ export default function ConfigSidebar() {
         </span>
       </div>
 
+<<<<<<< HEAD
       {/* Market Selector */}
       <div className="flex flex-col gap-2">
         <span className="text-[11px] text-ink-dim">Market Selector</span>
@@ -92,6 +99,8 @@ export default function ConfigSidebar() {
         </select>
       </div>
 
+=======
+>>>>>>> 329e9be2135d833cd4216995a8008f2985cca82d
       {/* Asset toggle — drives MAX, units, and which vault path runs */}
       <div className="flex flex-col gap-2">
         <span className="text-[11px] text-ink-dim">Collateral asset</span>

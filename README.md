@@ -1,75 +1,86 @@
-# Kyma (Kyma Terminal)
+# Kyma Terminal 
 
-**Autonomous Trading Intelligence — A deterministic, multi-timeframe execution engine for the OKX Track.**
-
-Kyma is not just a chatbot. It is a fully transparent Agent Service Provider (ASP). The central pitch is simple: **Kyma eliminates black-box AI trading by visually auditing its own logic on live charts before executing governed strategies.**
-
-Built for the OKX Hackathon (Finance Copilot / Best Product), Kyma combines a deterministic policy engine with real-time streaming market data.
+**Autonomous Trading Intelligence — A deterministic, multi-timeframe execution engine designed for the OKX Ecosystem.**
 
 ---
 
-## What this is
+## 🛑 The Problem: The "Black Box" of AI Trading
+The current landscape of AI-driven trading is plagued by a massive lack of transparency. Users are expected to blindly trust "black box" models that execute trades based on hidden parameters, obscure logic, and unseen data. When a trade goes wrong, there is no trail of accountability, no way to audit the AI’s reasoning, and no hard-coded risk management to protect the user's capital. 
 
-Two experiences glued together:
+This creates an environment where institutional and retail traders alike are sidelined by the sheer risk of adopting AI financial copilots. 
 
-1. **The landing page** — A multi-phase interactive experience introducing the Kyma ASP.
-2. **The terminal** (`/dashboard`) — An institutional dark-mode trading cockpit featuring:
-   - Live AI Execution Terminal streaming reasoning logs.
-   - Live TradingView SMC chart bound to WebSocket ticker streams.
-   - Split-plane interface for top 10 crypto markets.
-   - Deterministic risk controls (Max Drawdown, Position Size).
+## 💡 The Solution: Kyma 
+Kyma is a fully transparent Agent Service Provider (ASP). We eliminate black-box AI trading by visually auditing our agent's logic on live charts before executing any governed strategies. 
 
-Every agent action—deploy, open trade, close trade, pause, terminate—is strictly governed by a hard-coded risk validator that intercepts and rejects LLM recommendations violating user-defined bounds.
+Kyma bridges the gap between autonomous AI capabilities and institutional-grade risk management. It combines a **deterministic policy engine** with real-time streaming market data, ensuring that every AI decision is strictly governed by user-defined constraints.
 
----
-
-## Stack
-
-| Layer        | Choice                                                   |
-|--------------|----------------------------------------------------------|
-| Framework    | Next.js 16 (App Router) + React 19                       |
-| Backend      | Python FastAPI + `ccxt` (WebSockets)                     |
-| Intelligence | Multi-Timeframe Structural Analyzer + Policy Engine      |
-| Charts       | lightweight-charts (TradingView)                         |
-| 3D & Motion  | React Three Fiber, Drei, Framer Motion                   |
-| Styling      | Tailwind CSS, Bebas Neue + DM Mono                       |
+### Key Innovations:
+1. **Glass-Box Transparency:** Watch the AI analyze the market in real-time. The Reasoning Terminal streams the agent's internal thought process—perceiving liquidity sweeps, order block formations, and volatility expansions.
+2. **Deterministic Risk Validation:** Before the agent can route a trade or calculate lot sizing, the decision is forced through a rigid Policy Engine. If an LLM's recommendation violates your max drawdown or position size limits, it is instantly rejected.
+3. **Multi-Timeframe Structural Analysis:** Kyma evaluates market structure across simultaneous intervals, autonomously analyzing 5-minute charts for liquidity sweeps and 4-hour charts for macro trends to confirm setup validity.
+4. **Live Visual Audit:** An integrated TradingView-style Smart Money Concepts (SMC) chart bounds directly to the AI's WebSocket data stream, rendering the agent's identified order blocks and patterns natively on the UI.
 
 ---
 
-## Quick start
+## 🏗 Architecture Overview
 
-### 1. Backend (FastAPI)
+Kyma consists of two heavily synchronized layers:
+
+### 1. The Execution Engine (Backend)
+Built on **Python FastAPI** and **CCXT Pro**, the backend serves as the brain of the ASP.
+- **Dynamic Market Router:** Pulls live, streaming tick updates for the Top 10 crypto assets (BTC, ETH, SOL, etc.) using async WebSockets.
+- **Structural Analyzer:** Continuously scores market setups and momentum.
+- **Policy Engine:** The uncompromising risk validator that enforces capital allocation and hard stop-loss limits.
+- **ASP Endpoints:** Pre-configured REST endpoints matching standard OKX ASP schema inputs and outputs for seamless deployment.
+
+### 2. The Command Cockpit (Frontend)
+Built on **Next.js 16**, **React 19**, and **React Three Fiber**, the frontend provides a breathtaking institutional dark-mode terminal.
+- **Split-Plane Interface:** Effortlessly toggle between the top 10 crypto markets.
+- **Reasoning Terminal:** A live readout of the AI's processing and decision logs.
+- **SMC Chart:** Built with `lightweight-charts`, the graph reflects the live tick data and dynamically draws support/resistance boundaries based on the AI's WebSocket broadcasts.
+
+---
+
+## 🚀 How to Use Kyma
+
+### 1. Start the Backend (FastAPI)
+The Python engine needs to be running to stream live market data and evaluate risk.
 ```bash
 cd backend
 python -m venv venv
-source venv/bin/activate  # or `venv\Scripts\activate` on Windows
+source venv/bin/activate  # On Windows use `venv\Scripts\activate`
 pip install -r requirements.txt
-python main.py
+uvicorn main:app --reload --port 8000
 ```
+*The backend is now listening on `ws://localhost:8000/ws` for frontend connections.*
 
-### 2. Frontend (Next.js)
+### 2. Start the Frontend (Next.js)
+Boot up the cinematic Next.js interface.
 ```bash
+# In the root directory
 npm install
 npm run dev
 ```
 
-Open http://localhost:3000 for the landing page, or jump straight to http://localhost:3000/dashboard.
+### 3. Deploy the Agent
+1. Open [http://localhost:3000](http://localhost:3000) for the immersive 3D landing page experience, or jump straight to the cockpit at [http://localhost:3000/dashboard](http://localhost:3000/dashboard).
+2. In the **Config Sidebar**, select your Collateral Asset (ETH or USDC).
+3. Select your desired market from the **Top 10 Crypto Market Selector** (e.g., BTC/USDT).
+4. Set your **Allocated Capital**, **Risk Per Trade**, and **Max Drawdown**.
+5. Click **DEPLOY AGENT**. 
+6. Watch as the WebSocket connection engages and the Reasoning Terminal and SMC Chart spring to life, rendering the AI's autonomous trading intelligence in real-time.
 
 ---
 
-## Architecture Overview
+## 🛠 Technology Stack
 
-### Dynamic Market Router
-The Python FastAPI backend pulls live, streaming asset ticker updates for the top 10 crypto assets (BTC, ETH, SOL, etc.) using `ccxt` Pro (async WebSockets).
-
-### Multi-Timeframe Structural Analyzer
-The intelligence layer evaluates market structure across simultaneous intervals. Kyma analyzes 5-minute charts for liquidity sweeps and 4-hour charts for macro trends to autonomously determine setup validity.
-
-### Deterministic Policy Engine
-Before Kyma routes any trade or calculates lot sizing, the AI's decision is forced through a hard-coded risk validator. This system layer instantly rejects any LLM recommendation that violates user-defined maximum drawdowns or lot-size caps.
+| Layer        | Technology                                               |
+|--------------|----------------------------------------------------------|
+| Frontend     | Next.js 16, React 19, Tailwind CSS                       |
+| Backend      | Python, FastAPI, CCXT, Pydantic                          |
+| Websockets   | FastAPI WebSockets -> React `useRef` bindings            |
+| Charts       | Lightweight-Charts (TradingView)                         |
+| 3D / Motion  | React Three Fiber, Drei, Framer Motion                   |
 
 ---
-
-## OKX ASP Submission
-
-Kyma is packaged as an Agent Service Provider (ASP) with rigid input and output schemas matching OKX.AI platform specifications, allowing instant internal review team verification.
+*Built for the OKX Hackathon (Finance Copilot / Best Product).*

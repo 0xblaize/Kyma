@@ -13,7 +13,11 @@ const DashboardShell = dynamic(() => import('@/components/dashboard/DashboardShe
   loading: () => (
     <div className="flex h-screen w-full items-center justify-center bg-surface-0">
       <span className="font-mono text-[10px] uppercase tracking-[0.4em] text-acid/70">
+<<<<<<< HEAD
         booting kyma…
+=======
+        booting agent.os…
+>>>>>>> 329e9be2135d833cd4216995a8008f2985cca82d
       </span>
     </div>
   ),

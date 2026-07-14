@@ -70,7 +70,11 @@ export default function Terminal({ active }: TerminalProps) {
               <span className="h-2.5 w-2.5 rounded-full bg-amber-400/80" />
               <span className="h-2.5 w-2.5 rounded-full bg-emerald-500/80" />
               <span className="ml-2 font-mono text-[10px] uppercase tracking-[0.3em] text-white/40">
+<<<<<<< HEAD
                 kyma — live feed
+=======
+                agent.os — live feed
+>>>>>>> 329e9be2135d833cd4216995a8008f2985cca82d
               </span>
               <span className="ml-auto flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-[0.2em] text-acid">
                 <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-acid" />

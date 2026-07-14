@@ -23,7 +23,11 @@ export default function ChainBanner() {
       <div className="pointer-events-auto flex items-center gap-3 rounded-full border border-warn/40 bg-surface-1/90 px-3 py-1.5 shadow-[0_8px_24px_-12px_rgba(0,0,0,0.6)] backdrop-blur">
         <span className="h-1.5 w-1.5 rounded-full bg-warn shadow-[0_0_8px_rgba(234,179,8,0.7)]" />
         <span className="font-mono text-[10.5px] tracking-wide text-ink-dim">
+<<<<<<< HEAD
           You&rsquo;re on <span className="text-ink">{currentLabel}</span>. Base Sepolia is the recommended testnet for Kyma.
+=======
+          You&rsquo;re on <span className="text-ink">{currentLabel}</span>. Base Sepolia is the recommended testnet for Agent.OS.
+>>>>>>> 329e9be2135d833cd4216995a8008f2985cca82d
         </span>
         <button
           type="button"

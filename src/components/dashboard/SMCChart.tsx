@@ -52,7 +52,11 @@ export default function SMCChart() {
   const lastCandleRef = useRef<CandlestickData | null>(null)
   const priceLinesRef = useRef<Map<number, IPriceLine>>(new Map())
 
+<<<<<<< HEAD
   const { currentPrice, activeOrderBlocks, resetNonce, active, selectedMarket } = useDashboardState()
+=======
+  const { currentPrice, activeOrderBlocks, resetNonce, active } = useDashboardState()
+>>>>>>> 329e9be2135d833cd4216995a8008f2985cca82d
 
   // One-time chart construction.
   useEffect(() => {
@@ -191,7 +195,11 @@ export default function SMCChart() {
         </div>
         <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-fade">
           {currentPrice > 0
+<<<<<<< HEAD
             ? `${selectedMarket} · $${currentPrice.toFixed(2)}`
+=======
+            ? `BTCUSDT · $${currentPrice.toFixed(2)}`
+>>>>>>> 329e9be2135d833cd4216995a8008f2985cca82d
             : 'awaiting candle feed'}
         </span>
       </div>

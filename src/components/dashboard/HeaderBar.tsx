@@ -38,7 +38,11 @@ export default function HeaderBar() {
           <span className="text-[12px] font-extrabold leading-none text-acid">A</span>
         </div>
         <div className="flex flex-col leading-none">
+<<<<<<< HEAD
           <span className="text-[15px] font-bold tracking-tight text-ink">Kyma</span>
+=======
+          <span className="text-[15px] font-bold tracking-tight text-ink">Agent.OS</span>
+>>>>>>> 329e9be2135d833cd4216995a8008f2985cca82d
           <span className="mt-0.5 font-mono text-[9px] uppercase tracking-[0.22em] text-ink-fade">
             v1.0.0 · paper
           </span>

@@ -3,14 +3,22 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+<<<<<<< HEAD
 import { useScrollPhase, usePersistence } from '@/hooks/useKyma'
+=======
+import { useScrollPhase, usePersistence } from '@/hooks/useAgentOS'
+>>>>>>> 329e9be2135d833cd4216995a8008f2985cca82d
 import { PHASE, PHASE_COUNT } from '@/lib/phases'
 import PhaseStage from '@/components/PhaseStage'
 import DoorTransition from '@/components/DoorTransition'
 import Terminal from '@/components/Terminal'
 import GetStartedButton from '@/components/GetStartedButton'
 
+<<<<<<< HEAD
 export default function KymaPage() {
+=======
+export default function AgentOSPage() {
+>>>>>>> 329e9be2135d833cd4216995a8008f2985cca82d
   const router = useRouter()
   const { containerRef, phase, phaseProgress } = useScrollPhase()
   usePersistence() // remembers visit + restores scroll position
@@ -52,9 +60,15 @@ export default function KymaPage() {
                   autonomous trading intelligence
                 </div>
                 <h1 className="text-center font-display text-[clamp(72px,13vw,180px)] leading-[0.82] tracking-wide text-white">
+<<<<<<< HEAD
                   KYMA
                   <br />
                   <span className="text-acid">.TERMINAL</span>
+=======
+                  AGENT
+                  <br />
+                  <span className="text-acid">.OS</span>
+>>>>>>> 329e9be2135d833cd4216995a8008f2985cca82d
                 </h1>
               </motion.div>
             )}

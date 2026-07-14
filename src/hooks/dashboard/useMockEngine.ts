@@ -7,6 +7,7 @@ export function useMockEngine() {
   const {
     lifecycle,
     resetNonce,
+    selectedMarket,
     pushTick,
     pushLog,
     pushOrderBlock,
@@ -14,6 +15,11 @@ export function useMockEngine() {
   } = useDashboardState()
 
   const wsRef = useRef<WebSocket | null>(null)
+  const marketRef = useRef(selectedMarket)
+
+  useEffect(() => {
+    marketRef.current = selectedMarket
+  }, [selectedMarket])
 
   useEffect(() => {
     if (lifecycle !== 'active') {
@@ -38,7 +44,9 @@ export function useMockEngine() {
         const data = payload.data
         switch (payload.event) {
           case 'market_tick':
-            pushTick(data.price)
+            if (data.symbol === marketRef.current) {
+              pushTick(data.price)
+            }
             break
           case 'agent_log':
             pushLog(data)
