@@ -7,9 +7,13 @@ from services.market_router import start_market_router
 
 app = FastAPI(title="Kyma ASP Backend", version="1.0.0")
 
+import os
+
+FRONTEND_URL = os.getenv("FRONTEND_URL", "*")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # For hackathon/development
+    allow_origins=[FRONTEND_URL] if FRONTEND_URL != "*" else ["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

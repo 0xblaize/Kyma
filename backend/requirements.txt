@@ -3,3 +3,6 @@ uvicorn
 ccxt
 websockets
 pydantic
+openai
+python-dotenv
+numpy
