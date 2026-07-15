@@ -145,6 +145,41 @@ export function useMockEngine() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedMarket, selectedTimeframe])
 
+  // ── 3. Fetch Historical Data from Binance REST API ──────────────────────────
+  // Ensures the chart has historical candles even if the backend is offline.
+  useEffect(() => {
+    let active = true
+
+    async function fetchHistory() {
+      try {
+        const tf = selectedTimeframe === '1d' ? '1d' : selectedTimeframe
+        const res = await fetch(`https://api.binance.com/api/v3/klines?symbol=${selectedMarket.toUpperCase()}&interval=${tf}&limit=1000`)
+        if (!res.ok) return
+        const data = await res.json()
+        
+        if (!active) return
+
+        const candles = data.map((k: any) => ({
+          time: Math.floor(k[0] / 1000),
+          open: parseFloat(k[1]),
+          high: parseFloat(k[2]),
+          low: parseFloat(k[3]),
+          close: parseFloat(k[4]),
+        }))
+        
+        setHistoricalCandles(candles)
+      } catch (e) {
+        console.warn('[Binance REST] Failed to fetch historical klines:', e)
+      }
+    }
+
+    fetchHistory()
+
+    return () => {
+      active = false
+    }
+  }, [selectedMarket, selectedTimeframe, setHistoricalCandles])
+
   // ── Re-subscribe backend when market or timeframe changes ─────────────────
   useEffect(() => {
     const ws = backendWsRef.current
