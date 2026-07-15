@@ -52,8 +52,6 @@ export default function SMCChart() {
     historicalCandles,
   } = useDashboardState()
 
-  const [isLoading, setIsLoading] = useState(true)
-
   // ── Chart construction — runs once ────────────────────────────────────────
   useEffect(() => {
     const el = containerRef.current
@@ -125,7 +123,6 @@ export default function SMCChart() {
     series.setData(data)
     lastCandleRef.current = data[data.length - 1] ?? null
     chart.timeScale().fitContent()
-    setIsLoading(false)
   }, [historicalCandles])
 
   // ── Live tick — update the current candle in real-time ────────────────────
@@ -187,11 +184,6 @@ export default function SMCChart() {
     }
   }, [activeOrderBlocks])
 
-  // Reset loading indicator when market/timeframe changes
-  useEffect(() => {
-    setIsLoading(true)
-  }, [selectedMarket, selectedTimeframe])
-
   // Format the market label nicely: BTCUSDT → BTC/USDT
   const marketLabel = selectedMarket.includes('USDT')
     ? selectedMarket.replace('USDT', '/USDT')
@@ -250,14 +242,6 @@ export default function SMCChart() {
       {/* ── Chart Canvas ──────────────────────────────────────────────── */}
       <div className="relative flex-1 min-h-0">
         <div ref={containerRef} className="absolute inset-0" />
-
-        {isLoading && (
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-            <span className="rounded-md border border-line bg-surface-1/80 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.28em] text-ink-fade backdrop-blur">
-              fetching {marketLabel} {selectedTimeframe} candles…
-            </span>
-          </div>
-        )}
       </div>
     </div>
   )
