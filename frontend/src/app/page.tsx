@@ -48,6 +48,11 @@ export default function KymaPage() {
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.3 }}
               >
+                <img
+                  src="/logo.jpg"
+                  alt="Kyma"
+                  className="mb-6 h-16 w-16 rounded-2xl object-contain opacity-90 drop-shadow-[0_0_24px_rgba(163,230,53,0.4)]"
+                />
                 <div className="mb-3 font-mono text-[11px] uppercase tracking-[0.35em] text-acid/55">
                   autonomous trading intelligence
                 </div>

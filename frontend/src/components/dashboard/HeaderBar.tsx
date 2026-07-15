@@ -26,24 +26,26 @@ export default function HeaderBar() {
   return (
     <header className="grid h-[52px] grid-cols-[auto_1fr_auto] items-center gap-4 border-b border-line bg-surface-1 px-4">
       {/* 2.1 Brand */}
-      <a
-        href="/dashboard"
-        className="flex items-center gap-2.5"
-        onClick={(e) => {
-          e.preventDefault()
-          window.location.reload()
-        }}
-      >
-        <div className="flex h-7 w-7 items-center justify-center rounded-md bg-[#1e293b] ring-1 ring-[#475569]/40">
-          <span className="text-[12px] font-extrabold leading-none text-acid">A</span>
-        </div>
-        <div className="flex flex-col leading-none">
-          <span className="text-[15px] font-bold tracking-tight text-ink">Kyma</span>
-          <span className="mt-0.5 font-mono text-[9px] uppercase tracking-[0.22em] text-ink-fade">
-            v1.0.0 · paper
-          </span>
-        </div>
-      </a>
+  <a
+    href="/dashboard"
+    className="flex items-center gap-2.5"
+    onClick={(e) => {
+      e.preventDefault()
+      window.location.reload()
+    }}
+  >
+    <img
+      src="/logo.jpg"
+      alt="Kyma"
+      className="h-8 w-8 rounded-md object-contain"
+    />
+    <div className="flex flex-col leading-none">
+      <span className="text-[15px] font-bold tracking-tight text-ink">Kyma</span>
+      <span className="mt-0.5 font-mono text-[9px] uppercase tracking-[0.22em] text-ink-fade">
+        v1.0.0 · terminal
+      </span>
+    </div>
+  </a>
 
       {/* 2.2 System Status — center */}
       <div className="flex items-center justify-center">
