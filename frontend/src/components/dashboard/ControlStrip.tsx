@@ -3,13 +3,14 @@
 import { useEffect } from 'react'
 import { useDashboardState } from '@/hooks/dashboard/useDashboardState'
 import { useVaultActions } from '@/hooks/dashboard/useVaultActions'
+import { useDemoMode } from '@/hooks/dashboard/useDemoMode'
 
 // Spec §7: Emergency Action Bar. Every button now triggers an on-chain
 // vault tx (and therefore a wallet signature) before its corresponding UI
 // state advances. Flush is the one exception — it only clears the local
 // terminal buffer and stays signature-free.
 
-type Variant = 'danger' | 'neutral' | 'subtle' | 'primary'
+type Variant = 'danger' | 'neutral' | 'subtle' | 'primary' | 'demo'
 
 interface ButtonProps {
   label: string
@@ -25,6 +26,7 @@ const VARIANT: Record<Variant, string> = {
   neutral: 'border border-line bg-surface-2 text-ink hover:bg-[#1f1f23] active:bg-[#141417]',
   primary: 'bg-acid text-black hover:bg-[#bef264] active:bg-[#84cc16]',
   danger: 'bg-[#e11d48] text-white hover:bg-[#be123c] active:bg-[#9f1239]',
+  demo: 'border border-acid/50 bg-acid/5 text-acid hover:bg-acid/10 active:bg-acid/20',
 }
 
 function CtrlButton({ label, shortcut, variant, active, disabled, onClick }: ButtonProps) {
@@ -46,8 +48,9 @@ function CtrlButton({ label, shortcut, variant, active, disabled, onClick }: But
 }
 
 export default function ControlStrip() {
-  const { active, paused, terminated, txPhase, flushLogs } = useDashboardState()
+  const { lifecycle, active, paused, terminated, txPhase, flushLogs } = useDashboardState()
   const { togglePaused, terminate, reset } = useVaultActions()
+  const { launchDemo } = useDemoMode()
 
   const txBusy = txPhase === 'approving' || txPhase === 'signing' || txPhase === 'pending'
 
@@ -90,6 +93,15 @@ export default function ControlStrip() {
         )}
       </div>
       <div className="flex items-center gap-2">
+        {/* Demo button — only shown while idle so it doesn't clutter the live UI */}
+        {lifecycle === 'idle' && (
+          <CtrlButton
+            label="▶ Try Demo"
+            shortcut="D"
+            variant="demo"
+            onClick={launchDemo}
+          />
+        )}
         <CtrlButton
           label="Flush logs"
           shortcut="F"

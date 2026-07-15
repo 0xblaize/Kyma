@@ -4,6 +4,7 @@ import { useDashboardState } from '@/hooks/dashboard/useDashboardState'
 import { useWalletAssets } from '@/hooks/dashboard/useWalletAssets'
 import TickerStream from './TickerStream'
 import WalletHub from './WalletHub'
+import EquityCurve from './EquityCurve'
 
 // Spec §2: top header h-16. Left = brand, center = system-status text,
 // right = wallet + equity. Equity is now the REAL on-chain balance of the
@@ -48,7 +49,7 @@ export default function HeaderBar() {
   </a>
 
       {/* 2.2 System Status — center */}
-      <div className="flex items-center justify-center">
+      <div className="flex items-center justify-center gap-6">
         <span
           className={`font-mono text-[11px] tracking-wide ${
             ellipsisOn ? 'ellipsis-anim text-ink-mute' : 'text-ink-fade'
@@ -56,6 +57,11 @@ export default function HeaderBar() {
         >
           {statusText}
         </span>
+        {(active || terminated) && (
+          <div className="hidden md:block pl-6 border-l border-line">
+            <EquityCurve />
+          </div>
+        )}
       </div>
 
       {/* 2.3 Wallet + Equity */}

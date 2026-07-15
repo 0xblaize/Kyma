@@ -321,7 +321,7 @@ function ConnectorPicker({ connectors, isPending, error, onPick, onClose }: Pick
           <div>
             <h3 className="text-[15px] font-semibold tracking-tight text-ink">Connect a wallet</h3>
             <p className="mt-1 text-[11px] text-ink-mute">
-              Choose how you&rsquo;d like to connect. Sepolia testnet only.
+              Choose how you&rsquo;d like to connect. Base Sepolia testnet only.
             </p>
           </div>
           <button
@@ -334,13 +334,58 @@ function ConnectorPicker({ connectors, isPending, error, onPick, onClose }: Pick
             </svg>
           </button>
         </div>
+
+        {/* OKX Wallet — featured prominently for OKX hackathon judges */}
+        <div className="px-3 pb-2">
+          <div className="mb-1.5 px-0.5 font-mono text-[9px] uppercase tracking-[0.22em] text-acid/70">Recommended</div>
+          {unique.filter(c => c.id.toLowerCase().includes('okx') || c.name.toLowerCase().includes('okx')).map((c) => (
+            <button
+              key={c.uid}
+              type="button"
+              disabled={isPending}
+              onClick={() => onPick(c)}
+              className="group flex w-full items-center gap-3 rounded-xl border border-acid/40 bg-gradient-to-r from-acid/10 to-acid/5 px-3.5 py-3 text-left transition hover:border-acid/70 hover:from-acid/15 disabled:opacity-60"
+            >
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-black ring-1 ring-acid/30">
+                <OKXGlyph />
+              </div>
+              <div className="flex flex-1 flex-col leading-tight">
+                <span className="text-[12.5px] font-semibold text-ink">OKX Wallet</span>
+                <span className="text-[10px] tracking-wide text-acid/80">Official OKX browser extension</span>
+              </div>
+              <span className="rounded-sm border border-acid/40 bg-acid/10 px-1.5 py-0.5 font-mono text-[8px] uppercase tracking-[0.18em] text-acid">Recommended</span>
+            </button>
+          ))}
+          {/* If OKX extension is not installed, show install prompt */}
+          {unique.filter(c => c.id.toLowerCase().includes('okx') || c.name.toLowerCase().includes('okx')).length === 0 && (
+            <a
+              href="https://www.okx.com/web3/wallet/download"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group flex w-full items-center gap-3 rounded-xl border border-acid/30 bg-gradient-to-r from-acid/5 to-transparent px-3.5 py-3 text-left transition hover:border-acid/50"
+            >
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-black ring-1 ring-acid/20">
+                <OKXGlyph />
+              </div>
+              <div className="flex flex-1 flex-col leading-tight">
+                <span className="text-[12.5px] font-semibold text-ink">OKX Wallet</span>
+                <span className="text-[10px] tracking-wide text-ink-mute">Install OKX browser extension →</span>
+              </div>
+            </a>
+          )}
+        </div>
+
+        {/* Other wallets */}
         <div className="flex flex-col gap-1.5 px-3 pb-3">
+          <div className="mb-0.5 px-0.5 font-mono text-[9px] uppercase tracking-[0.22em] text-ink-fade">Other wallets</div>
           {unique.length === 0 && (
             <div className="rounded-xl border border-line bg-surface-2/40 px-4 py-6 text-center text-[11px] text-ink-mute">
-              No wallet detected. Install a browser wallet such as MetaMask.
+              No wallet detected. Install OKX Wallet or MetaMask.
             </div>
           )}
-          {unique.map((c) => (
+          {unique
+            .filter(c => !c.id.toLowerCase().includes('okx') && !c.name.toLowerCase().includes('okx'))
+            .map((c) => (
             <button
               key={c.uid}
               type="button"
@@ -350,7 +395,6 @@ function ConnectorPicker({ connectors, isPending, error, onPick, onClose }: Pick
             >
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-acid/20 to-acid/5 ring-1 ring-acid/20">
                 {c.icon ? (
-                  // wagmi connectors may expose an SVG/data URI icon
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={c.icon} alt="" className="h-5 w-5" />
                 ) : (
@@ -359,16 +403,9 @@ function ConnectorPicker({ connectors, isPending, error, onPick, onClose }: Pick
               </div>
               <div className="flex flex-1 flex-col leading-tight">
                 <span className="text-[12.5px] font-semibold text-ink">{prettyName(c)}</span>
-                <span className="text-[10px] tracking-wide text-ink-mute">
-                  {connectorTagline(c.id)}
-                </span>
+                <span className="text-[10px] tracking-wide text-ink-mute">{connectorTagline(c.id)}</span>
               </div>
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 12 12"
-                className="text-ink-mute transition group-hover:translate-x-0.5 group-hover:text-acid"
-              >
+              <svg width="12" height="12" viewBox="0 0 12 12" className="text-ink-mute transition group-hover:translate-x-0.5 group-hover:text-acid">
                 <path d="M3 6h6M7 3l3 3-3 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" fill="none" />
               </svg>
             </button>
@@ -391,15 +428,28 @@ function ConnectorPicker({ connectors, isPending, error, onPick, onClose }: Pick
 }
 
 function prettyName(c: { id: string; name: string }) {
+  if (c.id.toLowerCase().includes('okx') || c.name.toLowerCase().includes('okx')) return 'OKX Wallet'
   if (c.id === 'injected') return c.name === 'Injected' ? 'Browser wallet' : c.name
   if (c.id === 'walletConnect') return 'WalletConnect'
   return c.name
 }
 
 function connectorTagline(id: string) {
+  if (id.toLowerCase().includes('okx')) return 'Official OKX browser extension'
   if (id === 'injected') return 'MetaMask, Rabby, Brave & other extensions'
   if (id === 'walletConnect') return 'Scan a QR with a mobile wallet'
   return 'Connect via this provider'
+}
+
+function OKXGlyph() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <rect x="2" y="2" width="6.5" height="6.5" rx="1" fill="#a3e635"/>
+      <rect x="11.5" y="2" width="6.5" height="6.5" rx="1" fill="#a3e635"/>
+      <rect x="2" y="11.5" width="6.5" height="6.5" rx="1" fill="#a3e635"/>
+      <rect x="11.5" y="11.5" width="6.5" height="6.5" rx="1" fill="#a3e635"/>
+    </svg>
+  )
 }
 
 function ConnectorGlyph({ id }: { id: string }) {

@@ -63,6 +63,20 @@ export interface Position {
   pnl: number             // unrealized USDT
 }
 
+export interface ClosedTrade {
+  id: string
+  symbol: string
+  side: 'LONG' | 'SHORT'
+  entryPrice: number
+  exitPrice: number
+  pnl: number
+  sizeUsdt: number
+  leverage: number
+  openedAt: number
+  closedAt: number
+  reason: string
+}
+
 export type SelectedAsset = 'ETH' | 'USDC'
 
 // On-chain tx phase shown next to the Deploy/Terminate buttons.
@@ -103,6 +117,8 @@ interface DashboardState {
   winCount: number
   peakEquity: number             // running max, for max-drawdown card
   maxDrawdown: number            // most negative excursion (USDT, ≤ 0)
+  equityHistory: number[]        // sampled equity after each closed trade (for sparkline)
+  closedTrades: ClosedTrade[]    // Trade history ledger
   // Counters consumed by mock generators / terminal to re-seed or clear
   resetNonce: number
   flushNonce: number
@@ -156,6 +172,8 @@ const initial: DashboardState = {
   winCount: 0,
   peakEquity: 0,
   maxDrawdown: 0,
+  equityHistory: [],
+  closedTrades: [],
   resetNonce: 0,
   flushNonce: 0,
   historicalCandles: [],
@@ -199,7 +217,13 @@ function reducer(state: DashboardState, action: Action): DashboardState {
       // Only deploy from idle; ignored otherwise so the button can stay wired
       // to the same handler regardless of state.
       if (state.lifecycle !== 'idle') return state
-      return { ...state, lifecycle: 'active', peakEquity: state.allocatedCapital }
+      return {
+        ...state,
+        lifecycle: 'active',
+        peakEquity: state.allocatedCapital,
+        // Seed the equity curve with the starting capital as the baseline point.
+        equityHistory: state.allocatedCapital > 0 ? [state.allocatedCapital] : [],
+      }
     case 'TOGGLE_PAUSED':
       if (state.lifecycle === 'active') return { ...state, lifecycle: 'paused' }
       if (state.lifecycle === 'paused') return { ...state, lifecycle: 'active' }
@@ -261,6 +285,27 @@ function reducer(state: DashboardState, action: Action): DashboardState {
       const peakEquity = Math.max(state.peakEquity, equity)
       const dipFromPeak = equity - peakEquity   // ≤ 0
       const maxDrawdown = Math.min(state.maxDrawdown, dipFromPeak)
+      const newEquity = state.allocatedCapital + realizedPnl
+
+      // Synthesize a ClosedTrade record for the history table
+      const closedEntry: ClosedTrade = {
+        id: closed.tradeId,
+        symbol: closed.symbol,
+        side: closed.side,
+        entryPrice: closed.entryPrice,
+        // Since we don't have exact exit price in action, estimate from PnL
+        // (This is a mock UI limitation, in a real app backend provides it)
+        exitPrice: closed.side === 'LONG' 
+          ? closed.entryPrice * (1 + action.realized / closed.sizeUsdt / closed.leverage)
+          : closed.entryPrice * (1 - action.realized / closed.sizeUsdt / closed.leverage),
+        pnl: action.realized,
+        sizeUsdt: closed.sizeUsdt,
+        leverage: closed.leverage,
+        openedAt: Date.now() - 1000 * 60 * 15, // fake 15m ago
+        closedAt: Date.now(),
+        reason: action.wasWin ? 'Take Profit Hit' : 'Stop Loss Hit'
+      }
+
       return {
         ...state,
         openPositions: state.openPositions.filter((p) => p.tradeId !== action.tradeId),
@@ -270,6 +315,8 @@ function reducer(state: DashboardState, action: Action): DashboardState {
         closedTradeCount,
         peakEquity,
         maxDrawdown,
+        equityHistory: [...state.equityHistory, newEquity],
+        closedTrades: [closedEntry, ...state.closedTrades],
       }
     }
     case 'UPDATE_POSITIONS':
