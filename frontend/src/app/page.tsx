@@ -15,20 +15,34 @@ import GetStartedButton from '@/components/GetStartedButton'
 const HOW_IT_WORKS = [
   {
     num: '01',
-    icon: '🧠',
-    title: 'Multi-Timeframe AI Analysis',
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z" />
+        <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z" />
+      </svg>
+    ),
+    title: 'Multi-Timeframe AI',
     desc: 'Qwen LLM reads 15m + 4h candle data and reasons through every Smart Money Concept — Break of Structure, Order Blocks, Fair Value Gaps, Liquidity Sweeps — before touching a single trade.',
   },
   {
     num: '02',
-    icon: '🔒',
-    title: 'On-Chain Trade Governance',
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+      </svg>
+    ),
+    title: 'On-Chain Governance',
     desc: 'Every trade decision is validated by a smart contract on Base Sepolia. The Policy Engine enforces minimum R:R of 1.5, drawdown caps, and confidence thresholds. No shortcuts.',
   },
   {
     num: '03',
-    icon: '💸',
-    title: 'Automatic PnL Settlement',
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+      </svg>
+    ),
+    title: 'Auto Settlement',
     desc: 'Wins flow from the treasury to your wallet. Losses flow out. Every settlement is an on-chain transaction — transparent, auditable, and trustless. No middleman.',
   },
 ]
@@ -152,15 +166,9 @@ export default function KymaPage() {
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════════
-          HOW IT WORKS — appears below the sticky 3-D intro as a normal section
+          HOW IT WORKS — Terminal Style
           ═══════════════════════════════════════════════════════════════════════ */}
-      <section className="relative border-t border-acid/20 bg-surface-0 px-6 py-24 md:px-12 lg:px-24">
-
-        {/* Ambient glow blob */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute left-1/2 top-0 h-[420px] w-[700px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-acid/[0.04] blur-[120px]"
-        />
+      <section className="relative border-t border-line bg-surface-0 px-6 py-24 md:px-12 lg:px-24">
 
         {/* ── Section heading ──────────────────────────────────────────────── */}
         <motion.div
@@ -171,13 +179,13 @@ export default function KymaPage() {
           viewport={{ once: true }}
           transition={{ duration: 0.6, ease: 'easeOut' }}
         >
-          <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.4em] text-acid/60">
-            Under the hood
+          <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.4em] text-acid">
+            // architecture
           </p>
-          <h2 className="font-display text-4xl font-bold tracking-tight text-white md:text-5xl">
-            How It Works
+          <h2 className="font-mono text-3xl font-bold tracking-tight text-ink md:text-4xl">
+            SYSTEM_SPECS
           </h2>
-          <p className="mt-4 font-mono text-sm text-white/40 tracking-wide">
+          <p className="mt-4 font-mono text-[11px] text-ink-mute tracking-[0.2em] uppercase">
             Three layers. Fully transparent.
           </p>
         </motion.div>
@@ -195,34 +203,34 @@ export default function KymaPage() {
               key={card.num}
               variants={fadeUp}
               transition={{ duration: 0.55, ease: 'easeOut' }}
-              whileHover={{ y: -6, transition: { duration: 0.2 } }}
-              className="group relative flex flex-col gap-5 rounded-2xl border border-white/10 bg-white/5 p-8 backdrop-blur-sm"
+              className="group relative flex flex-col border border-line bg-surface-1"
             >
-              {/* Corner shimmer on hover */}
-              <div className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 ring-1 ring-acid/40 transition duration-300 group-hover:opacity-100" />
+              {/* Terminal Header */}
+              <div className="flex h-8 items-center justify-between border-b border-line bg-surface-2/50 px-3">
+                <span className="font-mono text-[9px] uppercase tracking-[0.25em] text-ink-mute">
+                  SYS.MOD.{card.num}
+                </span>
+                <span className="flex gap-1.5">
+                  <div className="h-1.5 w-1.5 rounded-full bg-line" />
+                  <div className="h-1.5 w-1.5 rounded-full bg-line" />
+                  <div className="h-1.5 w-1.5 rounded-full bg-acid/40" />
+                </span>
+              </div>
 
-              {/* Number */}
-              <span className="font-mono text-[11px] font-semibold tracking-[0.3em] text-acid">
-                {card.num}
-              </span>
-
-              {/* Icon */}
-              <span className="text-4xl leading-none" role="img" aria-label={card.title}>
-                {card.icon}
-              </span>
-
-              {/* Title */}
-              <h3 className="font-display text-xl font-bold text-white leading-snug">
-                {card.title}
-              </h3>
-
-              {/* Description */}
-              <p className="flex-1 font-mono text-[13px] leading-relaxed text-white/50">
-                {card.desc}
-              </p>
-
-              {/* Bottom accent line */}
-              <div className="h-px w-full bg-gradient-to-r from-acid/60 via-acid/20 to-transparent" />
+              <div className="flex flex-1 flex-col p-6">
+                <div className="mb-4 text-acid">
+                  {card.icon}
+                </div>
+                <h3 className="mb-3 font-mono text-[13px] font-bold uppercase tracking-wide text-ink">
+                  {card.title}
+                </h3>
+                <p className="flex-1 font-mono text-[11px] leading-relaxed text-ink-fade">
+                  {card.desc}
+                </p>
+              </div>
+              
+              {/* Bottom accent */}
+              <div className="h-[2px] w-full bg-gradient-to-r from-acid/40 to-transparent opacity-0 transition duration-300 group-hover:opacity-100" />
             </motion.div>
           ))}
         </motion.div>
@@ -236,14 +244,14 @@ export default function KymaPage() {
           viewport={{ once: true }}
           transition={{ duration: 0.6, ease: 'easeOut', delay: 0.1 }}
         >
-          <p className="font-mono text-[10px] uppercase tracking-[0.4em] text-white/30">
+          <p className="font-mono text-[10px] uppercase tracking-[0.4em] text-ink-mute">
             Built With
           </p>
           <div className="flex flex-wrap justify-center gap-3">
             {TECH_STACK.map((tech) => (
               <span
                 key={tech}
-                className="rounded-full border border-acid/30 bg-acid/5 px-4 py-1.5 font-mono text-[11px] tracking-widest text-acid transition hover:border-acid/60 hover:bg-acid/10"
+                className="border border-line bg-surface-1 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-ink-mute transition hover:border-acid/40 hover:text-acid"
               >
                 {tech}
               </span>
