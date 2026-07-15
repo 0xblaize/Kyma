@@ -86,7 +86,7 @@ export default function KymaPage() {
   const showCTA = phase === PHASE.cta && phaseProgress > 0.5
 
   return (
-    <main className="bg-black">
+    <main className="bg-surface-0">
       {/* Tall scroll container: one viewport per phase. The inner stage is
           sticky, so all visuals stay pinned while we scroll through phases. */}
       <div
@@ -166,9 +166,9 @@ export default function KymaPage() {
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════════
-          HOW IT WORKS — Terminal Style
+          HOW IT WORKS — appears below the sticky 3-D intro as a normal section
           ═══════════════════════════════════════════════════════════════════════ */}
-      <section className="relative border-t border-line bg-black px-6 py-24 md:px-12 lg:px-24">
+      <section className="relative border-t border-line bg-surface-0 px-6 py-24 md:px-12 lg:px-24">
 
         {/* ── Section heading ──────────────────────────────────────────────── */}
         <motion.div
