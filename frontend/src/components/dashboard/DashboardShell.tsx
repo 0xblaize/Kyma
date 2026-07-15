@@ -40,7 +40,7 @@ export default function DashboardShell() {
 
       <section className="grid min-h-0 grid-cols-1 lg:grid-cols-[minmax(0,1.45fr)_minmax(400px,1.25fr)_272px]">
         <AgentViewport />
-        <div className="grid min-h-0 grid-rows-[minmax(0,0.8fr)_minmax(0,1.4fr)] border-l border-line">
+        <div className="grid min-h-0 grid-rows-[minmax(0,0.4fr)_minmax(0,1.6fr)] border-l border-line">
           <ReasoningTerminal />
           <SMCChart />
         </div>

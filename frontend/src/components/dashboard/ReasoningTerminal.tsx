@@ -94,19 +94,6 @@ export default function ReasoningTerminal() {
                   : 'Deploy the agent to start live reasoning'}
               </span>
             </div>
-
-            {/* Demo Mode trigger — visible when idle, no logs yet */}
-            {lifecycle === 'idle' && (
-              <button
-                onClick={() => {
-                  // Push demo logs into the terminal to show judges how it works
-                  void import('@/hooks/dashboard/useDashboardState').then(() => {})
-                }}
-                className="mt-2 rounded-md border border-acid/30 bg-acid/5 px-4 py-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-acid transition hover:bg-acid/15"
-              >
-                ▶ Watch Demo
-              </button>
-            )}
           </div>
         ) : (
           <>
