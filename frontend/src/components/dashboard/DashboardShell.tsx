@@ -28,7 +28,7 @@ function LiveSMCMount() {
 
 export default function DashboardShell() {
   return (
-    <main className="relative grid h-screen w-full grid-rows-[52px_auto_auto_minmax(0,1fr)_auto_44px] bg-surface-0 text-ink">
+    <main className="relative grid h-screen w-full grid-rows-[52px_auto_auto_minmax(0,1fr)_auto_44px] bg-black text-ink">
       <EngineMount />
       {LIVE_LLM && <LiveSMCMount />}
 
