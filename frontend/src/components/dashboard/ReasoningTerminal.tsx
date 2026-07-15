@@ -80,7 +80,7 @@ export default function ReasoningTerminal() {
       </div>
 
       {/* Log feed */}
-      <div className="relative flex flex-1 min-h-0 flex-col overflow-y-auto bg-black px-4 py-3 font-mono text-[10.5px] leading-[1.6] [scrollbar-width:thin]">
+      <div className="relative flex flex-1 min-h-0 flex-col overflow-y-auto bg-black px-4 py-3 font-mono text-[9px] leading-[1.6] [scrollbar-width:thin]">
         {!hasLogs ? (
           <div className="flex h-full flex-col items-center justify-center gap-3">
             <img src="/logo.jpg" alt="Kyma" className="h-10 w-10 rounded-lg opacity-30" />

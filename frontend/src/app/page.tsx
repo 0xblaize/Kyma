@@ -284,7 +284,7 @@ export default function KymaPage() {
                 Kyma Terminal
               </span>
               <span className="font-mono text-[10px] text-white/30 tracking-widest">
-                Built for OKX Hackathon 2025
+                Built for OKX Hackathon 
               </span>
             </div>
           </div>
@@ -292,7 +292,7 @@ export default function KymaPage() {
           {/* Links */}
           <div className="flex items-center gap-6">
             <a
-              href="https://github.com"
+              href="https://github.com/0xblaize/Kyma"
               target="_blank"
               rel="noopener noreferrer"
               className="font-mono text-[11px] tracking-widest text-white/40 transition hover:text-acid"
@@ -300,7 +300,7 @@ export default function KymaPage() {
               GitHub
             </a>
             <a
-              href="/docs"
+              href="/"
               className="font-mono text-[11px] tracking-widest text-white/40 transition hover:text-acid"
             >
               Docs
