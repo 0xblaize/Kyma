@@ -168,7 +168,7 @@ export default function KymaPage() {
       {/* ═══════════════════════════════════════════════════════════════════════
           HOW IT WORKS — appears below the sticky 3-D intro as a normal section
           ═══════════════════════════════════════════════════════════════════════ */}
-      <section className="relative border-t border-line bg-surface-0 px-6 py-24 md:px-12 lg:px-24">
+      <section className="relative border-t border-line bg-black px-6 py-24 md:px-12 lg:px-24">
 
         {/* ── Section heading ──────────────────────────────────────────────── */}
         <motion.div
