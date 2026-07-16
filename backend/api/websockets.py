@@ -53,7 +53,7 @@ async def fetch_historical_candles(symbol_raw: str, timeframe: str, limit: int =
     tf = TF_MAP.get(timeframe, '1h')
 
     try:
-        exchange = ccxt.binance({'enableRateLimit': True})
+        exchange = ccxt.binanceus({'enableRateLimit': True})
         # fetch_ohlcv returns [[timestamp, open, high, low, close, volume], ...]
         ohlcv = await asyncio.to_thread(
             exchange.fetch_ohlcv, symbol, tf, limit=limit
