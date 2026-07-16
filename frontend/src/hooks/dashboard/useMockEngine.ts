@@ -153,7 +153,7 @@ export function useMockEngine() {
     async function fetchHistory() {
       try {
         const tf = selectedTimeframe === '1d' ? '1d' : selectedTimeframe
-        const res = await fetch(`https://api.binance.com/api/v3/klines?symbol=${selectedMarket.toUpperCase()}&interval=${tf}&limit=1000`)
+        const res = await fetch(`https://data-api.binance.vision/api/v3/klines?symbol=${selectedMarket.toUpperCase()}&interval=${tf}&limit=1000`)
         if (!res.ok) return
         const data = await res.json()
         

@@ -83,12 +83,12 @@ export default function ReasoningTerminal() {
       <div className="relative flex flex-1 min-h-0 flex-col overflow-y-auto bg-black px-4 py-3 font-mono text-[9px] leading-[1.6] [scrollbar-width:thin]">
         {!hasLogs ? (
           <div className="flex h-full flex-col items-center justify-center gap-3">
-            <img src="/logo.jpg" alt="Kyma" className="h-10 w-10 rounded-lg opacity-30" />
+            <img src="/logo.jpg" alt="Kyma" className="h-6 w-6 rounded-lg opacity-30" />
             <div className="flex flex-col items-center gap-1">
-              <span className="font-mono text-[10px] uppercase tracking-[0.32em] text-zinc-600">
+              <span className="font-mono text-[9px] uppercase tracking-[0.32em] text-zinc-600">
                 {active ? 'warming up…' : 'awaiting deploy'}
               </span>
-              <span className="text-[11px] text-zinc-700">
+              <span className="text-[10px] text-zinc-700">
                 {active
                   ? 'AI is analyzing market structure…'
                   : 'Deploy the agent to start live reasoning'}

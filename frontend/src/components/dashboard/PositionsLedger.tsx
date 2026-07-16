@@ -150,7 +150,7 @@ export default function PositionsLedger() {
       </div>
 
       {/* 6.2 Trade Table */}
-      <div className="overflow-hidden rounded-md border border-line bg-surface-1">
+      <div className="shrink-0 overflow-hidden rounded-md border border-line bg-surface-1">
         <table className="w-full border-collapse">
           <thead>
             <tr className="border-b border-line bg-surface-2/60 text-left">
