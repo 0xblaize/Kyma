@@ -56,6 +56,9 @@ export function useMockEngine() {
         backendAlive.current = true
         console.log('[Kyma] Backend connected')
         subscribeMarket(ws, marketRef.current, timeframeRef.current)
+        if (lifecycle === 'active') {
+          ws.send(JSON.stringify({ action: 'START_ENGINE', symbol: marketRef.current }))
+        }
       }
 
       ws.onmessage = (event) => {
@@ -185,7 +188,21 @@ export function useMockEngine() {
     const ws = backendWsRef.current
     if (!ws || ws.readyState !== WebSocket.OPEN) return
     subscribeMarket(ws, selectedMarket, selectedTimeframe)
-  }, [selectedMarket, selectedTimeframe])
+    if (lifecycle === 'active') {
+      ws.send(JSON.stringify({ action: 'START_ENGINE', symbol: selectedMarket }))
+    }
+  }, [selectedMarket, selectedTimeframe, lifecycle])
+
+  // Start/Stop engine based on lifecycle
+  useEffect(() => {
+    const ws = backendWsRef.current
+    if (!ws || ws.readyState !== WebSocket.OPEN) return
+    if (lifecycle === 'active') {
+      ws.send(JSON.stringify({ action: 'START_ENGINE', symbol: selectedMarket }))
+    } else if (lifecycle === 'paused' || lifecycle === 'terminated') {
+      ws.send(JSON.stringify({ action: 'STOP_ENGINE' }))
+    }
+  }, [lifecycle, selectedMarket])
 
   // Re-subscribe on reset
   useEffect(() => {

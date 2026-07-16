@@ -106,6 +106,32 @@ async def websocket_endpoint(websocket: WebSocket):
                         await manager.send_personal_message(payload, websocket)
                         print(f"[WS] Sent {len(candles)} candles for {symbol} {timeframe}")
 
+                elif action == 'START_ENGINE':
+                    from services.market_router import analyzer
+                    from datetime import datetime
+                    symbol_raw = msg.get('symbol', 'BTCUSDT')
+                    symbol = f"{symbol_raw.replace('USDT', '')}/USDT" if 'USDT' in symbol_raw and '/' not in symbol_raw else symbol_raw
+                    
+                    analyzer.active_symbols.add(symbol)
+                    analyzer.is_running = True
+                    print(f"[WS] Engine Started for {symbol}")
+                    
+                    payload = json.dumps({
+                        "event": "agent_log",
+                        "data": {
+                            "timestamp": datetime.now().strftime("%H:%M:%S"),
+                            "module": "SYSTEM",
+                            "message": f"Kyma Core AI Engine initialized. Actively analyzing {symbol}...",
+                            "type": "SUCCESS"
+                        }
+                    })
+                    await manager.send_personal_message(payload, websocket)
+                    
+                elif action == 'STOP_ENGINE':
+                    from services.market_router import analyzer
+                    analyzer.is_running = False
+                    print("[WS] Engine Stopped")
+
             except (json.JSONDecodeError, AttributeError):
                 # Plain text command (e.g. START_ENGINE)
                 print(f"[WS] Received: {data}")

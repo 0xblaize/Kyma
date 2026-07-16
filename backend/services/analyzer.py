@@ -94,6 +94,8 @@ class MultiTimeframeAnalyzer:
         """Called on every live market tick from market_router."""
         if not self.is_running:
             return
+        if symbol not in self.active_symbols:
+            return
         now = time.time()
         last = self.last_analysis.get(symbol, 0)
         if now - last >= ANALYSIS_INTERVAL:
