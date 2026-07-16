@@ -60,7 +60,7 @@ async def _fetch_candles(symbol_raw: str, timeframe: str, limit: int = 100):
         symbol = symbol_raw
 
     try:
-        exchange = ccxt.binance({"enableRateLimit": True})
+        exchange = ccxt.binanceus({"enableRateLimit": True})
         ohlcv = await asyncio.to_thread(
             exchange.fetch_ohlcv, symbol, timeframe, limit=limit
         )

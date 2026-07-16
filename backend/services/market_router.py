@@ -15,9 +15,8 @@ MARKETS = [
 analyzer = MultiTimeframeAnalyzer()
 
 async def start_market_router():
-    exchange = ccxt.binance({
-        'enableRateLimit': True,
-        'options': {'defaultType': 'future'}
+    exchange = ccxt.binanceus({
+        'enableRateLimit': True
     })
     
     while True:
