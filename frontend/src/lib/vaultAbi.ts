@@ -40,6 +40,7 @@ export const agentVaultAbi = [
       { name: 'amount', type: 'uint256' },
       { name: 'riskBps', type: 'uint256' },
       { name: 'maxDdBps', type: 'uint256' },
+      { name: 'profitTarget', type: 'uint256' },
     ],
     outputs: [],
   },

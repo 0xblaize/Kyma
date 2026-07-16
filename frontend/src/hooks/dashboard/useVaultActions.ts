@@ -29,6 +29,7 @@ export function useVaultActions() {
     allocatedCapital,
     riskPerTrade,
     maxDrawdownPct,
+    profitTarget,
     paused,
     setTxPhase,
     deployAgent: dispatchDeploy,
@@ -71,6 +72,7 @@ export function useVaultActions() {
     const amount = parseUnits(String(allocatedCapital), decimals)
     const riskBps = BigInt(Math.round(riskPerTrade * 100))     // 1.0% -> 100 bps
     const maxDdBps = BigInt(Math.round(maxDrawdownPct * 100))  // 10% -> 1000 bps
+    const profitTargetAmt = parseUnits(String(profitTarget || 0), decimals)
 
     try {
       // For USDC: ensure allowance covers amount. If not, ask user to approve.
@@ -102,7 +104,7 @@ export function useVaultActions() {
         abi: agentVaultAbi,
         address: assets.vault,
         functionName: 'deploy',
-        args: [asset, amount, riskBps, maxDdBps],
+        args: [asset, amount, riskBps, maxDdBps, profitTargetAmt],
         value: usingEth ? amount : 0n,
         chainId,
       })
@@ -118,7 +120,7 @@ export function useVaultActions() {
     }
   }, [
     address, assets, chainId, config,
-    allocatedCapital, selectedAsset, riskPerTrade, maxDrawdownPct,
+    allocatedCapital, selectedAsset, riskPerTrade, maxDrawdownPct, profitTarget,
     writeContractAsync, setTxPhase, dispatchDeploy, failed,
   ])
 
