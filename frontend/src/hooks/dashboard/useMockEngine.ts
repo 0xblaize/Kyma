@@ -39,9 +39,11 @@ export function useMockEngine() {
   const backendAlive   = useRef(false)
   const marketRef      = useRef(selectedMarket)
   const timeframeRef   = useRef(selectedTimeframe)
+  const lifecycleRef   = useRef(lifecycle)
 
   useEffect(() => { marketRef.current = selectedMarket },   [selectedMarket])
   useEffect(() => { timeframeRef.current = selectedTimeframe }, [selectedTimeframe])
+  useEffect(() => { lifecycleRef.current = lifecycle }, [lifecycle])
 
   // ── 1. Backend WebSocket (Kyma AI pipeline) ───────────────────────────────
   useEffect(() => {
@@ -56,7 +58,9 @@ export function useMockEngine() {
         backendAlive.current = true
         console.log('[Kyma] Backend connected')
         subscribeMarket(ws, marketRef.current, timeframeRef.current)
-        if (lifecycle === 'active') {
+        // Read lifecycle via ref — this closure is created once on mount, so
+        // reading `lifecycle` directly would be stale after a reconnect.
+        if (lifecycleRef.current === 'active') {
           ws.send(JSON.stringify({ action: 'START_ENGINE', symbol: marketRef.current }))
         }
       }
@@ -184,14 +188,13 @@ export function useMockEngine() {
   }, [selectedMarket, selectedTimeframe, setHistoricalCandles])
 
   // ── Re-subscribe backend when market or timeframe changes ─────────────────
+  // START_ENGINE is handled exclusively by the lifecycle effect below —
+  // sending it here too caused duplicate engine-start events per swap.
   useEffect(() => {
     const ws = backendWsRef.current
     if (!ws || ws.readyState !== WebSocket.OPEN) return
     subscribeMarket(ws, selectedMarket, selectedTimeframe)
-    if (lifecycle === 'active') {
-      ws.send(JSON.stringify({ action: 'START_ENGINE', symbol: selectedMarket }))
-    }
-  }, [selectedMarket, selectedTimeframe, lifecycle])
+  }, [selectedMarket, selectedTimeframe])
 
   // Start/Stop engine based on lifecycle
   useEffect(() => {

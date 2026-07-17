@@ -17,9 +17,11 @@ import { SMC_SYSTEM_PROMPT, type SMCRequestBody, type SMCResponse } from '@/lib/
 export const runtime = 'nodejs'
 
 // Generous timeout: Qwen3.6 is a thinking model — measured 16–25s per
-// SMC call (most of it reasoning tokens). 45s leaves headroom for spikes
-// without letting genuinely-dead requests linger.
-const REQUEST_TIMEOUT_MS = 45_000
+// SMC call on average, but reasoning spikes past 45s were getting aborted
+// ("This operation was aborted" in the terminal). 90s + a max_tokens cap
+// keeps slow-but-alive calls while still killing genuinely-dead ones.
+const REQUEST_TIMEOUT_MS = 90_000
+const MAX_TOKENS = 700
 
 async function callLLM(body: SMCRequestBody): Promise<SMCResponse> {
   const baseUrl = process.env.LLM_BASE_URL
@@ -43,6 +45,7 @@ async function callLLM(body: SMCRequestBody): Promise<SMCResponse> {
       body: JSON.stringify({
         model,
         temperature: 0.4,
+        max_tokens: MAX_TOKENS,
         response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: SMC_SYSTEM_PROMPT },
@@ -76,6 +79,13 @@ async function callLLM(body: SMCRequestBody): Promise<SMCResponse> {
 
     const parsed = JSON.parse(cleaned) as SMCResponse
     return parsed
+  } catch (err) {
+    // Surface timeouts clearly — "This operation was aborted" told users
+    // nothing about WHY the LLM line failed.
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error(`LLM timed out after ${REQUEST_TIMEOUT_MS / 1000}s`)
+    }
+    throw err
   } finally {
     clearTimeout(timeout)
   }

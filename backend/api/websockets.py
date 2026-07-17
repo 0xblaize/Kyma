@@ -112,20 +112,25 @@ async def websocket_endpoint(websocket: WebSocket):
                     symbol_raw = msg.get('symbol', 'BTCUSDT')
                     symbol = f"{symbol_raw.replace('USDT', '')}/USDT" if 'USDT' in symbol_raw and '/' not in symbol_raw else symbol_raw
                     
-                    analyzer.active_symbols.add(symbol)
+                    # Single-market session: REPLACE the active set instead of
+                    # accumulating. Previously .add() left every past market
+                    # running, so swapping BTC→ADA analyzed both concurrently.
+                    already_running = analyzer.is_running and analyzer.active_symbols == {symbol}
+                    analyzer.active_symbols = {symbol}
                     analyzer.is_running = True
-                    print(f"[WS] Engine Started for {symbol}")
-                    
-                    payload = json.dumps({
-                        "event": "agent_log",
-                        "data": {
-                            "timestamp": datetime.now().strftime("%H:%M:%S"),
-                            "module": "SYSTEM",
-                            "message": f"Kyma Core AI Engine initialized. Actively analyzing {symbol}...",
-                            "type": "SUCCESS"
-                        }
-                    })
-                    await manager.send_personal_message(payload, websocket)
+
+                    if not already_running:
+                        print(f"[WS] Engine Started for {symbol}")
+                        payload = json.dumps({
+                            "event": "agent_log",
+                            "data": {
+                                "timestamp": datetime.now().strftime("%H:%M:%S"),
+                                "module": "SYSTEM",
+                                "message": f"Kyma Core AI Engine initialized. Actively analyzing {symbol}...",
+                                "type": "SUCCESS"
+                            }
+                        })
+                        await manager.send_personal_message(payload, websocket)
                     
                 elif action == 'STOP_ENGINE':
                     from services.market_router import analyzer
